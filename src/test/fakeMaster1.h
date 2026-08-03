@@ -1,0 +1,6 @@
+#ifndef FAKEMASTER1HF
+#define FAKEMASTER1HF
+
+#define FMASTER_DATASIZE  32
+
+#endif
