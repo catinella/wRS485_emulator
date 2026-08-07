@@ -1,0 +1,5 @@
+*.o
+RS485_emulator
+RS485_updateSignal
+libRS485emulatorAPI.so
+
