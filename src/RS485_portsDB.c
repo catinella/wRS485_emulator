@@ -15,8 +15,13 @@
 // Language: C
 // 
 // Description:
-//	This module provides functions to manage the slave-ports-list database file and its concurrent access too.
+//	This module provides functions to manage the ports-list database file and its concurrent access too.
 //	
+//	Database structure:
+//		+----------+----------+----------+-----------+
+//		|   role   | busPort  |  devPort |    pid    |
+//		| (string) | (string) | (string) | (integer) |
+//		+----------+----------+----------+-----------+
 //	
 //	
 //	Rules:
@@ -52,7 +57,7 @@ static sqlite3 *portsDB = NULL;
 static int pidByPort_callback (void *pid, int count, char **data, char **columns) {
 	//
 	// Description
-	//	This is the callback called to retrive the ID ot the provess who owned the port
+	//	This is the callback called to retrive the ID of the process who owned the port
 	//
 
 	if (count != 1 || strcmp(columns[0], "pid") != 0) 
@@ -68,11 +73,13 @@ static int pidByPort_callback (void *pid, int count, char **data, char **columns
 static int usedPorts_callback (void *psl, int count, char **data, char **columns) {
 	//
 	// Description
-	//	This is the callback called for every item in the busPorts query.
+	//	This callback is called by sqlite3_exec() function for every item in the busPorts query. The goal is to obtains a
+	//	list of all in-use-ports names
+	//
 	//	[!] It allocates new memory areas in the heap, you will have to release them explicity
 	//
 	// Arguments:
-	//	list    - Pointer to a linked list of names
+	//	psl     - Pointer to an array of names
 	//	count   - The number of columns in the result set
 	//	data    - The row's data
 	//	columns - The column names
@@ -128,7 +135,7 @@ RS485emErrorCodes init_portsDB() {
 			\"role\"    TEXT,                     \
 			\"busPort\" TEXT NOT NULL UNIQUE,     \
 			\"devPort\" TEXT NOT NULL UNIQUE,     \
-			 \"pid\" INTEGER NOT NULL             \
+			\"pid\"     INTEGER NOT NULL          \
 		);";
 		
 		// SQL statement execution
@@ -145,6 +152,7 @@ RS485emErrorCodes init_portsDB() {
 			chown(RS485_PORTSDBFILE, 0, RS485EMULE_GROUP)             != 0
 		)
 	)
+		// ERROR!
 		err = RS485EMULE_ERROR_FORBIDDENOP;
 
 	return(err);

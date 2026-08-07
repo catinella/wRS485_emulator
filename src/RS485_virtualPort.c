@@ -15,7 +15,7 @@
 // Language: C
 // 
 // Description:
-//	This librar provides all functions you need to create and use a virual serial port.
+//	This library provides all functions you need to create and use a virual serial port.
 //
 //	
 //	
@@ -30,7 +30,7 @@
 //	                      |                    |    |    |                  |
 //                          |             +------+    |    +--------+         |
 //	                      |             |           |             |         |
-//	                  +---+-----+  +----+-----+ +---+------+ +----+-----+ +-+--------+
+//	                  +---+------+ +----+-----+ +---+------+ +----+-----+ +-+--------+
 //	                  | A:B port | | C:D port | | E:F port | | G:H port | | I:L port |
 // 	                  | manager  | | manager  | | manager  | | manager  | | manager  |
 //	                  +----------+ +----------+ +----------+ +----------+ +----------+
@@ -106,7 +106,12 @@ static void init_FilesList (struct filesList *files) {
 static RS485emErrorCodes getDirContent (const char *path, struct filesList *files) {
 	//
 	// Desription:
-	//	It stores the files belong to the "path" arggument in the "filesList" given array
+	//	It stores the files belong to the "path" argument defined folder in the "filesList" given array
+	//
+	// Returned value:
+	//	RS485EMULE_SUCCESS
+	//	RS485EMULE_ERROR_IOFAILED
+	//	RS485EMULE_ERROR_DATAOVERFLOW
 	//
 	RS485emErrorCodes err = RS485EMULE_SUCCESS;
 	DIR           *dh = NULL;
@@ -138,10 +143,11 @@ static RS485emErrorCodes getDirContent (const char *path, struct filesList *file
 static RS485emErrorCodes search_FilesList (struct filesList files, const char *target) {
 	//
 	// Description:
-	//	It looks for the "target" argument in the "files" list.
+	//	It looks for the "target" argument defined string in the "files" list.
 	//
 	// Returned value
-	//
+	//	RS485EMULE_SUCCESS
+	//	RS485EMULE_WARNING_ITEMNOTFOUND
 	//
 	RS485emErrorCodes err = RS485EMULE_WARNING_ITEMNOTFOUND;
 	uint16_t          t;
@@ -159,6 +165,14 @@ static RS485emErrorCodes search_FilesList (struct filesList files, const char *t
 
 
 static RS485emErrorCodes push_FilesList (struct filesList *files, const char *filename) {
+	//
+	// Description:
+	//	It adds a new item to the argument defined list
+	//
+	// Returned value
+	//	RS485EMULE_SUCCESS
+	//	RS485EMULE_ERROR_DATAOVERFLOW
+	//
 	RS485emErrorCodes err = RS485EMULE_SUCCESS;
 	uint16_t          t;
 	
@@ -175,7 +189,7 @@ static RS485emErrorCodes push_FilesList (struct filesList *files, const char *fi
 uint16_t size_FilesList (struct filesList files) {
 	//
 	// Description:
-	//	It returns the number of items
+	//	It returns the number of stored items
 	//
 	uint16_t t;
 	
@@ -204,7 +218,7 @@ void init_virtualPort (struct virtualPort *item) {
 RS485emErrorCodes free_virtualPort (struct virtualPort *item) {
 	//
 	// Description:
-	//	It releases the resources allocated for the argument defined struct, previousely
+	//	It releases the resources allocated for the argument defined struct, previousely.
 	//	[!] This function is called by the emulator process in its shouting down procedure, only.
 	//
 	// Returned code:
@@ -296,11 +310,19 @@ RS485emErrorCodes create_virtualPort (struct virtualPort* item, virtualPortRole 
 	//
 	// Description:
 	//	This function allows you to create a new virtual serial port
-	//
+	//	Every "socat" command call creates 2 linked virtual-ports, always. 
+	//	
+	//	pid=X                         file-a   file-b           pid=y  ppid=X
+	//	+--------------------+       +-----------------+        +-----------+
+	//	| RS485 BUS emulator |<----->| port-a | port-b |<------>|   slave   |
+	//	+--------------------+       +-----------------+        +-----------+
+	//	
 	// Returned value:
 	//	RS485EMULE_SUCCESS               The object has been set correctly
+	//	RS485EMULE_ERROR_EXTTOOLFAILURE  The discovery found less or more then 2 ports.
 	//	RS485EMULE_ERROR_IOFAILED        The new port opening operation failed
 	//	RS485EMULE_ERROR_NOSYSRESOURCE   There are no resources to fork a new process
+	//	RS485EMULE_ERROR_FORBIDDENOP     File attributes changing operation failed
 	//
 	RS485emErrorCodes err = RS485EMULE_SUCCESS;
 	struct filesList  oldPorts;

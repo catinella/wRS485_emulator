@@ -15,6 +15,7 @@
 // Language: C
 // 
 // Description:
+//	This module provides functions to manage the ports-list database file and its concurrent access too.
 //	
 //	Symbols:
 //		RS485_PORTSDBFILE   SQLight DB file
