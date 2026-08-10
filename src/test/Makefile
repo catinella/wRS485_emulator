@@ -101,6 +101,7 @@ GCCOPTS = -Wall $(gopt) -std=c11 -D_XOPEN_SOURCE=600 -D_POSIX_C_SOURCE=200809L -
 
 PRJLIB_FILE = ../libRS485emulatorAPI.so
 PRJLIB_L    = -lRS485emulatorAPI
+MINUTE_SCG  = /usr/local/share/minute/minute_cCodeGenerator.py
 
 #-------------------------------------------------------------------------------------------------------------------------------
 #                                                 M A I N  R U L E S
@@ -110,7 +111,7 @@ all:				 $(PRJLIB_FILE) $(testsList) $(fakeDevsList) $(fakeMastersList)
 
 clean:
 				@echo "[CLEAN]"
-				@rm -fv *.o 
+				@rm -fv *.o *.sgc
 
 
 cleanall:			clean
@@ -131,10 +132,13 @@ test_%.o:			test_%.c ../%.c
 				@$(CC) $(GCCOPTS) -c $< $(INCLPATH) -I. -I../ "-DTESTMODE=$(TESTMODE)" -o $@ 
 			
 
-test_%.o:			test_%.c
+utest_%.o:			utest_%.c utest_%__main.sgc
 				@echo "[$(CCLAB) 2] $@"
 				@$(CC) $(GCCOPTS) -c $< $(INCLPATH) -I. -I../ "-DTESTMODE=$(TESTMODE)" -o $@ 
-			
+
+utest_%__main.sgc:	utest_%.c
+				@echo "[SCRIPT] $@"
+				@$(MINUTE_SCG) --srcFilename $< --tgtFilename $@ --verbose
 
 fakeSerialDev%.o:		fakeSerialDev%.c
 				@echo "[$(CCLAB) 3] $@"
@@ -190,8 +194,8 @@ test_RS485_%:		../RS485_%.o test_RS485_%.o libForTests.o
 				@LD_LIBRARY_PATH="../" $(CC) -Wall -L../ -o $@ $^ -lm $(PRJLIB_L)
 
 
-test_%:			test_%.o libForTests.o
+utest_%:			utest_%.o libForTests.o
 				@echo "[LD 4] $@"
-				@LD_LIBRARY_PATH="../" $(CC) -Wall -L../ -o $@ $^ -lm $(PRJLIB_L)
+				@LD_LIBRARY_PATH="../" $(CC) -Wall -L../ -o $@ $^ -lm $(PRJLIB_L) -lMinuteC
 
 

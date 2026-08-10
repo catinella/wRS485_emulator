@@ -8,7 +8,7 @@
 //                                                           Emulator         
 //
 // 
-// File:     test_libForTests.c
+// File:     utest_libForTests.c
 // 
 // Authour:  Silvano Catinella
 // 
@@ -25,7 +25,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdbool.h>
-#include <debugTools.h>
+#include <minute.h>
 #include <libForTests.h>
 
 
@@ -96,13 +96,4 @@ TEST (libForTests_testingSuite, randomInt_test) {
 	return;
 }
 
-int main() {
-	randomString_test();
-	stringInversion_test();
-	randomInt_test();
-
-	
-	return(0);
-}
-	
-	
+#include "utest_libForTests__main.sgc"
