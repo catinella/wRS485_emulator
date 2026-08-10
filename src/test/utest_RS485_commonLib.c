@@ -8,7 +8,7 @@
 //                                                           Emulator         
 //
 // 
-// File:     test_RS485_commonLib.c
+// File:     utest_RS485_commonLib.c
 // 
 // Authour:  Silvano Catinella
 // 
@@ -32,6 +32,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <ctype.h>
+#include <minute.h>
 #include <debugTools.h>
 #include <RS485_commonLib.h>
 #include <RS485_emulator.h>
@@ -102,11 +103,5 @@ TEST (RS485_commonLib_testingSuite, stringSplitterTest) {
 	return;
 }
 
+#include "utest_RS485_commonLib__main.sgc"
 
-int main() {
-	checkForProcStatusTest();
-	pidfileTest();
-	stringSplitterTest();
-	
-	return(0);
-}

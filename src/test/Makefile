@@ -54,7 +54,7 @@ else
 	DLIBPATH = /usr/local/lib/x86_64-linux-gnu
 endif
 
-testSrcsList     := $(shell ls test_*.c)
+testSrcsList     := $(shell ls utest_*.c)
 testsList        := $(testSrcsList:%.c=%)
 fDevSrcsList     := $(shell ls fakeSerialDev*.c)
 fakeDevsList     := $(fDevSrcsList:%.c=%)
@@ -117,7 +117,7 @@ clean:
 cleanall:			clean
 				@echo "[CLEANALL]"
 				@rm -fv $(testsList) $(fakeDevsList) $(fakeMastersList)
-				@make -C../ cleanall
+				#@make -C../ cleanall
 
 
 $(PRJLIB_FILE):	
@@ -196,6 +196,7 @@ test_RS485_%:		../RS485_%.o test_RS485_%.o libForTests.o
 
 utest_%:			utest_%.o libForTests.o
 				@echo "[LD 4] $@"
-				@LD_LIBRARY_PATH="../" $(CC) -Wall -L../ -o $@ $^ -lm $(PRJLIB_L) -lMinuteC
+				@LD_LIBRARY_PATH="../" $(CC) -Wall -L../ -Wl,-rpath,'$$ORIGIN/..' -o $@ \
+					$^ -lm $(PRJLIB_L) -lMinuteC -lsqlite3
 
 
