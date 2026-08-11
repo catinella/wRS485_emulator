@@ -30,12 +30,21 @@
 #include <debugTools.h>
 #include <RS485_emulator.h>
 #include <RS485_portsDB.h>
+#include <sqlite3.h>
 #include <minute.h>
 
 #define PREFIX       "/dev/Port-"
 #define TESTNUMPORTS 16
 
 bool signalFlag = false;
+
+struct qRetData {
+	char              **list;
+	unsigned int      itsNumber;
+	RS485emErrorCodes err;
+};
+
+#define PIDLIMIT 7200
 
 //------------------------------------------------------------------------------------------------------------------------------
 //                                         P R I V A T E   F U N C T I O N S
@@ -82,10 +91,72 @@ void fakePidFile (pid_t fpid) {
 }
 
 
+static int myCB (void *psl, int count, char **data, char **columns) {
+	//
+	// Description
+	//	This callback is called by sqlite3_exec() function for every item in the query.
+	//
+	//	[!] It allocates new memory areas in the heap, you will have to release them explicity
+	//
+	// Arguments:
+	//	psl     - Pointer to an array of names
+	//	count   - The number of columns in the result set
+	//	data    - The row's data
+	//	columns - The column names
+	//
+	static portsDBindexType numups = 0;
+
+	if (psl == NULL)
+		// Function initialization
+		numups = 0;
+
+	else {
+		struct qRetData *qrd = (struct qRetData*)psl;
+		
+		if (count != 1 || strcmp(columns[0], "busPort") != 0) {
+			// ERROR! (You should never get this error)
+			qrd->err = RS485EMULE_ERROR_INTERNAL;
+		} else {
+			qrd->list[numups] = strdup(data[0]);
+			qrd->itsNumber = numups;
+			//BGTRACE
+		}
+		numups++;
+		qrd->list[numups] = NULL;
+		
+	}
+	return(0);
+}
+
+void freeList (char **list) {
+	unsigned int t = 0;
+	while (list[t] != NULL) {
+		free(list[t]);
+		list[t] = NULL;
+		t++;
+	}
+	return;
+}
+
+bool lookForPort(const char *port, const char **list) {
+	unsigned t = 0;
+	bool found = false;
+	while (list[t] != NULL) {
+		if (strcmp(list[t], port) == 0) {
+			found = true;
+			break;
+		}
+	}
+	return(found);
+}
 //------------------------------------------------------------------------------------------------------------------------------
 //                                                    T E S T S
 //------------------------------------------------------------------------------------------------------------------------------
 TEST (RS485_portsDB_testingSuite, dbCreation) {
+	//
+	// Description:
+	//	It tests the functions to open the dtatabase, write foo-data inside it, and close it.
+	//
 	RS485emErrorCodes err = RS485EMULE_SUCCESS;
 	
 	err = init_portsDB();
@@ -98,31 +169,93 @@ TEST (RS485_portsDB_testingSuite, dbCreation) {
 }
 
 TEST (RS485_portsDB_testingSuite, dbCheckForContent) {
+	//
+	// Description:
+	//	It writes data into the database, read it, and check for read data.
+	//
 	RS485emErrorCodes err = RS485EMULE_SUCCESS;
-	char              *myList[TESTNUMPORTS + 10];
-	char              portName[PATH_MAX];
-	unsigned int      counter = 0;
 
 	init_portsDB();
 	err = fillDB(TESTNUMPORTS, PREFIX);
 
-	if (err == RS485EMULE_SUCCESS)
-		err = usedPorts_portsDB(myList);
-	
-	while (err == RS485EMULE_SUCCESS && counter < TESTNUMPORTS + 1) {
-		sprintf(portName, "%s%d", PREFIX, counter);
-		if (strcmp(portName, myList[counter]) != 0)
-			break;
+	if (err == RS485EMULE_SUCCESS) {
+		char            *myList[TESTNUMPORTS];
+		char            *apsList[TESTNUMPORTS];   // all ports list
+		//char            portName[PATH_MAX];
+		sqlite3         *portsDB = NULL;
+		char            sqlStatement[1024];
+		struct qRetData qrd;
+		int             rc;
 		
-		counter++;
-	}
-	if (counter != TESTNUMPORTS)
-		// ERROR!
-		err = RS485EMULE_ERROR_GENERIC;
-			
-	ASSERT_EQ (err, RS485EMULE_SUCCESS);
+		//
+		// Initialization...
+		//
+		sprintf(sqlStatement, "SELECT devPort FROM busportDB;");
+		for (unsigned int t = 0; t < TESTNUMPORTS; t++) {
+			myList[t] = NULL;
+			apsList[t] = NULL;
+		}
+		myCB(NULL, 0, NULL, NULL);
+		qrd.list      = apsList;
+		qrd.err       = RS485EMULE_SUCCESS;
+		qrd.itsNumber = 0;
+		
+		
+		if ((rc = sqlite3_open(RS485_PORTSDBFILE, &portsDB)) != SQLITE_OK)
+			// ERROR!
+			printf ("ERROR(%d)! Test procedure intermnally failed\n", __LINE__);
 	
-	close_portsDB();
+		else if ((rc = sqlite3_exec(portsDB, sqlStatement, myCB, (void*)&qrd, NULL)) != SQLITE_OK) 
+			// ERROR!
+			printf ("ERROR(%d)! Test procedure intermnally failed\n", __LINE__);
+	
+		else if (qrd.err != RS485EMULE_SUCCESS)
+			// ERROR!
+			printf ("ERROR(%d)! Test procedure intermnally failed\n", __LINE__);
+	
+		else {	
+			uint8_t t = 0;
+			div_t   x;
+			
+			while (apsList[t] != NULL && err == RS485EMULE_SUCCESS) {
+				x = div(t, 4);
+				if (x.rem == 0) {
+					sprintf(
+						sqlStatement, 
+						"UPDATE portsDB SET pid=%d WHERE busPort=\"%s\";", 
+						(PIDLIMIT + t), apsList[t]
+					);
+					
+					if (sqlite3_exec(portsDB, sqlStatement, NULL, NULL, NULL) != SQLITE_OK)
+						// ERROR!
+						err = RS485EMULE_ERROR_INTERNAL;
+				}
+			}
+		
+			
+			err = usedPorts_portsDB(myList);
+			ASSERT_EQ (err, RS485EMULE_SUCCESS);
+	
+			if (err == RS485EMULE_SUCCESS) {
+				bool flag = false;
+				t = 0;
+				
+				while (apsList[t] != NULL && flag == true) {
+					x = div(t, 4);
+					if (x.rem == 0)
+						flag = lookForPort(apsList[t], (const char**)myList);
+					t++;
+				}
+				ASSERT_TRUE((flag == false));
+			}
+		}
+		
+		sqlite3_close(portsDB);
+		freeList(apsList);
+		freeList(myList);
+		close_portsDB();
+	}
+	
 	
 	return;
 }
@@ -130,8 +263,9 @@ TEST (RS485_portsDB_testingSuite, dbCheckForContent) {
 
 TEST (RS485_portsDB_testingSuite, pidChk_portsDB) {
 	//
-	// [!] The following lines retrive the in-use ports
-	//     Thid feture is performed by the BUS emulator to know where to send and receive data
+	// Description:
+	//	It writes foo-data in the database, and associates every port (data) to not existent PIDs. So, when pidChk_portsDB()
+	//	function is called it will re-set those port as available ones (pid=0). The procedure will test this operation.
 	//
 	RS485emErrorCodes err = RS485EMULE_SUCCESS;
 	portsDBindexType t;
