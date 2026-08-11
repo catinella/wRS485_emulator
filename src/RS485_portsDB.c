@@ -15,14 +15,29 @@
 // Language: C
 // 
 // Description:
-//	This module provides functions to manage the ports-list database file and its concurrent access too.
+//	This module is used just by the RS485_virtualPortsList one, and it provides functions to manage the ports-list tored in
+//    the database file and its concurrent access too.
+//
+//	+-------------------+             +---------------+
+//	|                   |             |               |             +--------+
+//	| RS485_virtualPort +---(uses)--->| RS485_portsDB +---(uses)--->| SQLite |
+//	|                   |             |               |             +----+---+
+//	+-------------------+             +---------------+                  |
+//	                                                                     |
+//	                                                                 /---+---\
+//	                                                                 |  file |
+//	                                                                 \-------/
+//
+//
 //	
 //	Database structure:
 //		+----------+----------+----------+-----------+
 //		|   role   | busPort  |  devPort |    pid    |
 //		| (string) | (string) | (string) | (integer) |
 //		+----------+----------+----------+-----------+
-//	
+//	                                              ^
+//	                                              |
+//	                                   (it is used just by the APIs)
 //	
 //	Rules:
 //		- All unused records must have the "port" fieeld set to '\0'
@@ -54,7 +69,7 @@ struct queryRetData {
 static sqlite3 *portsDB = NULL;
 
 
-static int pidByPort_callback (void *pid, int count, char **data, char **columns) {
+static int _pidByPort_callback (void *pid, int count, char **data, char **columns) {
 	//
 	// Description
 	//	This is the callback called to retrive the ID of the process who owned the port
@@ -70,7 +85,7 @@ static int pidByPort_callback (void *pid, int count, char **data, char **columns
 }
 
 
-static int usedPorts_callback (void *psl, int count, char **data, char **columns) {
+static int _usedPorts_callback (void *psl, int count, char **data, char **columns) {
 	//
 	// Description
 	//	This callback is called by sqlite3_exec() function for every item in the busPorts query. The goal is to obtains a
@@ -172,7 +187,7 @@ void close_portsDB() {
 }
 
 
-RS485emErrorCodes push_portsDB(const char* busport, const char* devport, virtualPortRole role) {
+RS485emErrorCodes push_portsDB(const char* busport, const char* devport, virtualPortRole_t role) {
 	//
 	// Description:
 	//	It allows you to add a new virtual serial port to the in-process DB
@@ -186,7 +201,7 @@ RS485emErrorCodes push_portsDB(const char* busport, const char* devport, virtual
 	char              sqlStatement[256];
 	char              roleChar = 'S';
 	
-	if (role == vPortMaster) roleChar = 'M';
+	if (role == RS485EMULE_PORTMASTER) roleChar = 'M';
 	sprintf(sqlStatement, "INSERT INTO portsDB VALUES(\"%c\", \"%s\", \"%s\", 0);", roleChar, busport, devport);
 	if (sqlite3_exec(portsDB, sqlStatement, NULL, NULL, NULL) != SQLITE_OK) 
 		err = RS485EMULE_ERROR_INTERNAL;
@@ -199,8 +214,8 @@ RS485emErrorCodes usedPorts_portsDB (char **portsList) {
 	//
 	// Description:
 	//	It allows the emulator's process to retrive the list of all in-use ports
-	//	[!] The memory are used by portsList MUST be allocated by the function caller. The memory used to store every item is
-	//	    allocated by the callback, dinamically.
+	//	[!] The memory are used by portsList MUST be allocated by the function caller. The memory used to store every item
+	//	    is allocated by the callback, dinamically.
 	//
 	// Returned value:
 	//	RS485EMULE_SUCCESS
@@ -212,12 +227,12 @@ RS485emErrorCodes usedPorts_portsDB (char **portsList) {
 	struct queryRetData qrd;
 
 	// Initialization...
-	usedPorts_callback(NULL, 0, NULL, NULL);
+	_usedPorts_callback(NULL, 0, NULL, NULL);
 	qrd.list = portsList;
 	qrd.err  = RS485EMULE_SUCCESS;
 	portsList[0] = '\0';
 	
-	rc = sqlite3_exec(portsDB, sqlStatement, usedPorts_callback, (void*)&qrd, NULL);
+	rc = sqlite3_exec(portsDB, sqlStatement, _usedPorts_callback, (void*)&qrd, NULL);
 	if (rc != SQLITE_OK)
 		err = RS485EMULE_ERROR_INTERNAL;
 	else 
@@ -252,7 +267,7 @@ RS485emErrorCodes pidChk_portsDB(const char *port) {
 	pid_t             pid;
 	
 	sprintf(sqlStatement, "SELECT \"pid\" FROM portsDB WHERE busPort==\"%s\";", port);
-	if (sqlite3_exec(portsDB, sqlStatement, pidByPort_callback, (void*)&pid, NULL) != SQLITE_OK) {
+	if (sqlite3_exec(portsDB, sqlStatement, _pidByPort_callback, (void*)&pid, NULL) != SQLITE_OK) {
 		err = RS485EMULE_ERROR_INTERNAL;
 
 	} else if (pid > 0) {

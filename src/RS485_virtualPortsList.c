@@ -28,7 +28,7 @@
 
 static bool initDBflag = false;
 
-void init_virtualPortsListItem (struct virtualPortsListItem *item) {
+void init_virtualPortsListItem (virtualPortsListItem_t *item) {
 	//
 	// Description:
 	//	It initializes the argument defined struct virtualPortsListItem object
@@ -40,7 +40,7 @@ void init_virtualPortsListItem (struct virtualPortsListItem *item) {
 }
 
 
-void init_virtualPortsList (struct virtualPortsList *list) {
+void init_virtualPortsList (virtualPortsList_t *list) {
 	//
 	// Description:
 	//	It initializes the argument defined struct virtualPortsList object
@@ -57,29 +57,29 @@ void init_virtualPortsList (struct virtualPortsList *list) {
 	return;
 }
 
-void print_virtualPortsList (struct virtualPortsList *list) {
-	struct virtualPortsListItem *ptr = NULL;
+void print_virtualPortsList (virtualPortsList_t *list) {
+	virtualPortsListItem_t *ptr = NULL;
 	for (ptr = list->head; ptr != NULL; ptr = ptr->next)
 		printf("%p: %s    (prev=%p  next=%p)\n", ptr, ptr->vpObj.port, ptr->prev, ptr->next);
 	return;
 }
 
 
-RS485emErrorCodes add_virtualPortsList (struct virtualPortsList *list) {
+RS485emErrorCodes add_virtualPortsList (virtualPortsList_t *list) {
 	//
 	// Description:
-	//	It creates a new virtual port, uses it to make a list item, and add the item to the list tail
+	//	It creates a new emply virtual port, it uses the port to make a list item, and add the item to the list tail
 	//
 	// Returned code:
 	//	see the create_virtualPort() documentation
 	//
-	struct virtualPortsListItem *item = NULL;
-	RS485emErrorCodes           err   = RS485EMULE_SUCCESS;
+	virtualPortsListItem_t *item = NULL;
+	RS485emErrorCodes       err   = RS485EMULE_SUCCESS;
 
 	// List item creation
-	item = (struct virtualPortsListItem*)malloc(sizeof(struct virtualPortsListItem));
+	item = (virtualPortsListItem_t*)malloc(sizeof(virtualPortsListItem_t));
 	init_virtualPortsListItem(item);
-	err = create_virtualPort(&(item->vpObj), vPortSlave);
+	err = create_virtualPort(&(item->vpObj), RS485EMULE_PORTSLAVE);
 
 	// Item linking to the list
 	if (list->tail == NULL) {
@@ -95,23 +95,23 @@ RS485emErrorCodes add_virtualPortsList (struct virtualPortsList *list) {
 }
 
 
-RS485emErrorCodes update_virtualPortsList (struct virtualPortsList *list, const char **busports) {
+RS485emErrorCodes update_virtualPortsList (virtualPortsList_t *list, const char **busports) {
 	//
 	// Description:
-	//	It accepts a list of file names of assigned ports and set the argument defined virtual ports list considering that
+	//	It accepts a list of file names of assigned ports and set the argument defined virtual ports list considering the
 	//	files names set. To make the iteration faster, all not-yet-assigned ports are stored in the bottom side of the list.
 	//
 	// Returned value:
 	//	RS485EMULE_SUCCESS
 	//	RS485EMULE_ERROR_INTERNAL
 	//
-	struct virtualPortsListItem *item = NULL;
-	struct virtualPort          *myport = NULL;
-	int                         i     = 0;
-	RS485emErrorCodes           err   = RS485EMULE_SUCCESS;
+	virtualPortsListItem_t *item = NULL;
+	virtualPort_t          *myport = NULL;
+	int                    i     = 0;
+	RS485emErrorCodes      err   = RS485EMULE_SUCCESS;
 	
 	if (list->head == NULL || list->tail == NULL)
-		// ERROR!
+		// ERROR! (the list is empty)
 		err = RS485EMULE_ERROR_INTERNAL;
 		
 	else {
@@ -173,13 +173,13 @@ RS485emErrorCodes update_virtualPortsList (struct virtualPortsList *list, const 
 }
 
 
-struct virtualPort* next_virtualPortsList (struct virtualPortsList *list) {
+virtualPort_t* next_virtualPortsList (virtualPortsList_t *list) {
 	//
 	// Description:
 	//	This function allows you to iterate among the ports. All available ones are stored in the bottom side of
 	//	the list
 	//
-	struct virtualPort *obj = NULL;
+	virtualPort_t *obj = NULL;
 	if (list->it != NULL) {
 		obj = &(list->it->vpObj);
 		list->it = list->it->next;
@@ -188,7 +188,7 @@ struct virtualPort* next_virtualPortsList (struct virtualPortsList *list) {
 }
 
 
-void resetIT_virtualPortsList (struct virtualPortsList *list) {
+void resetIT_virtualPortsList (virtualPortsList_t *list) {
 	//
 	// Description:
 	//	It resets the internal iterator pointer
@@ -198,7 +198,7 @@ void resetIT_virtualPortsList (struct virtualPortsList *list) {
 }
 
 
-void free_virtualPortsList (struct virtualPortsList *list) {
+void free_virtualPortsList (virtualPortsList_t *list) {
 	//
 	// Description:
 	//	It release all memory areas allocated for the list's items, kill all processes that keep alive the virtual ports,
@@ -228,7 +228,7 @@ void free_virtualPortsList (struct virtualPortsList *list) {
 }
 
 
-RS485emErrorCodes pidsChk_virtualPortsList (struct virtualPortsList *list) {
+RS485emErrorCodes pidsChk_virtualPortsList (virtualPortsList_t *list) {
 	//
 	// Description:
 	//	It checks for ports owned by dead processes and releases the ports 
@@ -238,9 +238,9 @@ RS485emErrorCodes pidsChk_virtualPortsList (struct virtualPortsList *list) {
 	//	RS485EMULE_WARNING_NOTHINGTODO  No modifications have been made
 	//	pidChk_portsDB() exit codes
 	//
-	struct virtualPortsListItem *ptr  = NULL;
-	RS485emErrorCodes           err   = RS485EMULE_WARNING_NOTHINGTODO;
-	bool                        flag  = false;
+	virtualPortsListItem_t *ptr  = NULL;
+	RS485emErrorCodes      err   = RS485EMULE_WARNING_NOTHINGTODO;
+	bool                   flag  = false;
 		
 	for (ptr = list->head; ptr != NULL; ptr = ptr->next) {
 		if (ptr->vpObj.fd > 0) {
@@ -255,8 +255,10 @@ RS485emErrorCodes pidsChk_virtualPortsList (struct virtualPortsList *list) {
 
 	if (err <= 64) {
 		if (flag)
+			// SUCCESS!
 			err = RS485EMULE_SUCCESS;
 		else
+			// ERROR!
 			err = RS485EMULE_WARNING_NOTHINGTODO;
 	}
 	

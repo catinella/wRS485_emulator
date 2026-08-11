@@ -26,28 +26,30 @@
 
 #include <RS485_virtualPort.h>
 
-struct virtualPortsListItem {
-	struct virtualPort          vpObj;
-	struct virtualPortsListItem *next;
-	struct virtualPortsListItem *prev;
-};
+typedef struct virtualPortsListItem virtualPortsListItem_t;
 
-struct virtualPortsList {
-	struct virtualPortsListItem *head;
-	struct virtualPortsListItem *tail;
-	struct virtualPortsListItem *it;
-};
+typedef struct virtualPortsListItem {
+	virtualPort_t          vpObj;
+	virtualPortsListItem_t *next;
+	virtualPortsListItem_t *prev;
+} virtualPortsListItem_t;
 
-void   init_virtualPortsListItem (struct virtualPortsListItem *item);
+typedef struct {
+	virtualPortsListItem_t *head;
+	virtualPortsListItem_t *tail;
+	virtualPortsListItem_t *it;
+} virtualPortsList_t;
 
-void                init_virtualPortsList     (struct virtualPortsList *list);
-RS485emErrorCodes   add_virtualPortsList      (struct virtualPortsList *list);
-RS485emErrorCodes   update_virtualPortsList   (struct virtualPortsList *list, const char **busports);
-RS485emErrorCodes   pidsChk_virtualPortsList  (struct virtualPortsList *list);
-struct virtualPort* next_virtualPortsList     (struct virtualPortsList *list);
-void                resetIT_virtualPortsList  (struct virtualPortsList *list);
-void                free_virtualPortsList     (struct virtualPortsList *list);
-void                print_virtualPortsList    (struct virtualPortsList *list);
+void              init_virtualPortsListItem (virtualPortsListItem_t *item);
+
+void              init_virtualPortsList     (virtualPortsList_t *list);
+RS485emErrorCodes add_virtualPortsList      (virtualPortsList_t *list);
+RS485emErrorCodes update_virtualPortsList   (virtualPortsList_t *list, const char **busports);
+RS485emErrorCodes pidsChk_virtualPortsList  (virtualPortsList_t *list);
+virtualPort_t*    next_virtualPortsList     (virtualPortsList_t *list);
+void              resetIT_virtualPortsList  (virtualPortsList_t *list);
+void              free_virtualPortsList     (virtualPortsList_t *list);
+void              print_virtualPortsList    (virtualPortsList_t *list);
 
 
 #endif

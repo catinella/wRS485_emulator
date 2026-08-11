@@ -16,7 +16,7 @@
 // 
 // Description:
 //	This software provides a fake RS485 serial network. All the executable files that implement the fake serial devices can be
-//	Aconnecte to the BUS using the virual available slaves ports
+//	connecte to the BUS using the virual available slaves ports
 //
 //	Communication protocol:
 //	=======================
@@ -83,7 +83,6 @@
 #define RS485_PKGDATA_SIZE     192
 
 struct option myopts[] = {
-	 {"configFile", required_argument, 0, 'c'},
 	 {"foreground", 0,                 0, 'f'},
 	 {"help",       0,                 0, 'h'},
 	 {"version",    0,                 0, 'v'},
@@ -107,11 +106,19 @@ void sigHandler (int signum) {
 
 
 void summary (const char *execfile) {
-	fprintf(stderr, "Use: %s [--configFile=<filename>] [--foreground] [--help] [--version]\n", execfile);
+	//
+	// Description:
+	//	Common help (howto use) message
+	//
+	fprintf(stderr, "Use: %s [--foreground] [--help] [--version]\n", execfile);
 }
 
 
 void printErr (const char *message, rs485emule_portsNum_type ec) {
+	//
+	// Description:
+	//	Centralized log message
+	//
 	if (foreground) {
 		char symbol[32];
 		if      (ec <= 32)           strcpy(symbol, "[  INFO  ]"); 
@@ -134,14 +141,12 @@ void printErr (const char *message, rs485emule_portsNum_type ec) {
 //                                                       M A I N 
 //------------------------------------------------------------------------------------------------------------------------------
 int main(int argc, char *argv[]) {
-	char                    configFile[PATH_MAX];
-	char                    serialPort[PATH_MAX];
-	uint8_t                 err = RS485EMULE_SUCCESS;
-	struct virtualPort      masterPort;
-//	char                    bufferForMessages[1024];
-	struct virtualPortsList vplist;
+	char               serialPort[PATH_MAX];
+	uint8_t            err = RS485EMULE_SUCCESS;
+	virtualPort_t      masterPort;
+//	char               bufferForMessages[1024];
+	virtualPortsList_t vplist;
 	
-	configFile[0] = '\0';
 	serialPort[0] = '\0';
 	
 	//
@@ -153,10 +158,7 @@ int main(int argc, char *argv[]) {
 		
 		while (c >= 0) {
 			c = getopt_long(argc, argv, "c:fhv", myopts, &option_index);
-			if (c == 'c')
-				strcpy(configFile, optarg);
-
-			else if (c == 'f')
+			if (c == 'f')
 				foreground = true;
 				
 			else if (c == 'h') {
@@ -175,9 +177,6 @@ int main(int argc, char *argv[]) {
 		}
 	}
 
-	// Defaults applying
-	if (configFile[0] == '\0') strcpy(configFile, RS485EMULE_CONFIG_FILE);
-
 	// Signal settings....	
 	signal(SIGTERM,                sigHandler);
 	signal(SIGINT,                 sigHandler);
@@ -186,10 +185,12 @@ int main(int argc, char *argv[]) {
 	init_virtualPortsList(&vplist);
 	init_virtualPort(&masterPort);
 
-	if ((err = create_virtualPort(&masterPort, vPortMaster)) && err > 64) {
+	// Master port creation...
+	if ((err = create_virtualPort(&masterPort, RS485EMULE_PORTMASTER)) && err > 64) {
 		// ERROR!
 		fprintf(stderr, "ERROR! I cannot create the virtual serial port for the master device\n");
 		
+	// Master port opening...
 	} else if ((err = open_virtualPort(&masterPort)) && err > 64) {
 		// ERROR!
 		fprintf(stderr, "ERROR! I cannot open the \"%s\" file\n", serialPort);
@@ -197,13 +198,13 @@ int main(int argc, char *argv[]) {
 	} else {
 		struct pollfd           fds[RS485EMULE_PORTSNUM+1];
 		int ret;
-		void                    *chunk = malloc(RS485_PKGDATA_SIZE);
-		char                    *busports[RS485EMULE_PORTSNUM+1];
-		struct virtualPort      *virtualport = NULL;
+		void                     *chunk = malloc(RS485_PKGDATA_SIZE);
+		char                     *busports[RS485EMULE_PORTSNUM+1];
+		virtualPort_t            *virtualport = NULL;
 		rs485emule_portsNum_type t;
 		rs485emule_portsNum_type fdsNum;
-		struct timespec         pollTimeout;
-		chunkDataSize_type      trs = 0;
+		struct timespec          pollTimeout;
+		chunkDataSize_type       trs = 0;
 		
 		//
 		// Initialization....
@@ -338,7 +339,7 @@ int main(int argc, char *argv[]) {
 						// Data writing to slave devices
 						//
 						resetIT_virtualPortsList(&vplist);
-						while((virtualport = next_virtualPortsList(&vplist)) && virtualport != NULL) {
+						while((virtualport = next_virtualPortsList(&vplist)) != NULL) {
 							if (virtualport->fd > 0) {
 								err = send_virtualPort (*virtualport, chunk, trs);
 								if (err != RS485EMULE_SUCCESS) {

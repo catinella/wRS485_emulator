@@ -74,7 +74,7 @@ struct filesList {
 //                                    P R I V A T E   F U N C T I O N S 
 //------------------------------------------------------------------------------------------------------------------------------
 
-static void free_FilesList (struct filesList *files) {
+static void _free_FilesList (struct filesList *files) {
 	//
 	// Desription:
 	//	It free al system resources used to store the filenames list. [!] the list must be NULL terminated
@@ -92,7 +92,7 @@ static void free_FilesList (struct filesList *files) {
 };
 
 
-static void init_FilesList (struct filesList *files) {
+static void _init_FilesList (struct filesList *files) {
 	//
 	// Description:
 	//	Structure initialization
@@ -103,7 +103,7 @@ static void init_FilesList (struct filesList *files) {
 }
 
 
-static RS485emErrorCodes getDirContent (const char *path, struct filesList *files) {
+static RS485emErrorCodes _getDirContent (const char *path, struct filesList *files) {
 	//
 	// Desription:
 	//	It stores the files belong to the "path" argument defined folder in the "filesList" given array
@@ -118,7 +118,7 @@ static RS485emErrorCodes getDirContent (const char *path, struct filesList *file
 	struct dirent *entry;
 	uint16_t      counter = 0;
 	
-	free_FilesList(files);
+	_free_FilesList(files);
 
 	if ((dh = opendir(path)) && dh == NULL)
 		// ERROR
@@ -140,7 +140,7 @@ static RS485emErrorCodes getDirContent (const char *path, struct filesList *file
 }
 
 
-static RS485emErrorCodes search_FilesList (struct filesList files, const char *target) {
+static RS485emErrorCodes _search_FilesList (struct filesList files, const char *target) {
 	//
 	// Description:
 	//	It looks for the "target" argument defined string in the "files" list.
@@ -164,7 +164,7 @@ static RS485emErrorCodes search_FilesList (struct filesList files, const char *t
 }
 
 
-static RS485emErrorCodes push_FilesList (struct filesList *files, const char *filename) {
+static RS485emErrorCodes _push_FilesList (struct filesList *files, const char *filename) {
 	//
 	// Description:
 	//	It adds a new item to the argument defined list
@@ -186,7 +186,7 @@ static RS485emErrorCodes push_FilesList (struct filesList *files, const char *fi
 }
 
 
-uint16_t size_FilesList (struct filesList files) {
+static uint16_t _size_FilesList (struct filesList files) {
 	//
 	// Description:
 	//	It returns the number of stored items
@@ -203,7 +203,7 @@ uint16_t size_FilesList (struct filesList files) {
 //------------------------------------------------------------------------------------------------------------------------------
 //                                     P U B L I C   F U N C T I O N S
 //------------------------------------------------------------------------------------------------------------------------------
-void init_virtualPort (struct virtualPort *item) {
+void init_virtualPort (virtualPort_t *item) {
 	//
 	// Description:
 	//	It ititializes the argument defined struct
@@ -215,7 +215,7 @@ void init_virtualPort (struct virtualPort *item) {
 }
 
 
-RS485emErrorCodes free_virtualPort (struct virtualPort *item) {
+RS485emErrorCodes free_virtualPort (virtualPort_t *item) {
 	//
 	// Description:
 	//	It releases the resources allocated for the argument defined struct, previousely.
@@ -261,33 +261,37 @@ RS485emErrorCodes free_virtualPort (struct virtualPort *item) {
 }
 
 
-struct virtualPort* new_virtualPort() {
+virtualPort_t* new_virtualPort() {
 	//
 	// Description:
 	//	It creates a new object allocated into the heap memory area
 	//
-	struct virtualPort *item = (struct virtualPort*)malloc(sizeof(struct virtualPort));
+	virtualPort_t *item = (virtualPort_t*)malloc(sizeof(virtualPort_t));
 	init_virtualPort(item);
 
 	return(item);
 }
 
 
-RS485emErrorCodes open_virtualPort (struct virtualPort* item) {
+RS485emErrorCodes open_virtualPort (virtualPort_t* item) {
 	//
 	// Description:
 	//	This function allows you to open the virtual serial port
 	//
 	// Returned value:
-	//	RS485EMULE_SUCCESS
-	//	RS485EMULE_ERROR_IOFAILED
-	//	RS485EMULE_ERROR_NOSYSRESOURCE
+	//	RS485EMULE_SUCCESS              Procedure successfully terminated
+	//	RS485EMULE_ERROR_UNAVAILRES     The port is already in use
+	//	RS485EMULE_ERROR_IOFAILED       I cannot open the port
+	//	RS485EMULE_ERROR_NOSYSRESOURCE  Port setting procedure failed 
 	//
 	RS485emErrorCodes err = RS485EMULE_SUCCESS;
 	struct termios    options;
 
-	item->fd = open(item->port, O_RDWR|O_NOCTTY|O_ASYNC);
-	if (item->fd < 0) 
+	if (item->fd < 0)
+		// ERROR!
+		err = RS485EMULE_ERROR_UNAVAILRES;
+	
+	else if ((item->fd = open(item->port, O_RDWR|O_NOCTTY|O_ASYNC)) < 0)
 		// ERROR!
 		err = RS485EMULE_ERROR_IOFAILED;
 	
@@ -296,7 +300,9 @@ RS485emErrorCodes open_virtualPort (struct virtualPort* item) {
 		cfsetispeed(&options, RS485EMULE_BAUDRATES) < 0 ||
 		cfsetospeed(&options, RS485EMULE_BAUDRATES) < 0
 	) 
+		// ERROR!
 		err = RS485EMULE_ERROR_NOSYSRESOURCE;
+
 	else {
 		cfmakeraw(&options);
 		if (tcsetattr(item->fd, TCSANOW, &options) < 0)
@@ -306,7 +312,7 @@ RS485emErrorCodes open_virtualPort (struct virtualPort* item) {
 }
 
 
-RS485emErrorCodes create_virtualPort (struct virtualPort* item, virtualPortRole role) {
+RS485emErrorCodes create_virtualPort (virtualPort_t* item, virtualPortRole_t role) {
 	//
 	// Description:
 	//	This function allows you to create a new virtual serial port
@@ -327,8 +333,8 @@ RS485emErrorCodes create_virtualPort (struct virtualPort* item, virtualPortRole 
 	RS485emErrorCodes err = RS485EMULE_SUCCESS;
 	struct filesList  oldPorts;
 
-	init_FilesList(&oldPorts);
-	err = getDirContent(RS485EMULE_PORTSFOLDER, &oldPorts);
+	_init_FilesList(&oldPorts);
+	err = _getDirContent(RS485EMULE_PORTSFOLDER, &oldPorts);
 		
 	if (err == RS485EMULE_SUCCESS) {
 			
@@ -358,9 +364,9 @@ RS485emErrorCodes create_virtualPort (struct virtualPort* item, virtualPortRole 
 			usleep(50000); 
 
 
-			init_FilesList(&newPorts);
-			init_FilesList(&tmpPorts);
-			err = getDirContent(RS485EMULE_PORTSFOLDER, &newPorts);
+			_init_FilesList(&newPorts);
+			_init_FilesList(&tmpPorts);
+			err = _getDirContent(RS485EMULE_PORTSFOLDER, &newPorts);
 	
 			if (err == RS485EMULE_SUCCESS) {
 				//
@@ -371,16 +377,16 @@ RS485emErrorCodes create_virtualPort (struct virtualPort* item, virtualPortRole 
 					if (newPorts.list[t] == NULL)
 						break;
 					else {
-						if (search_FilesList(oldPorts, newPorts.list[t]) == RS485EMULE_WARNING_ITEMNOTFOUND) {
+						if (_search_FilesList(oldPorts, newPorts.list[t]) == RS485EMULE_WARNING_ITEMNOTFOUND) {
 							//printf("New port: %s\n", newPorts.list[t]);
-							err = push_FilesList(&tmpPorts, newPorts.list[t]);
+							err = _push_FilesList(&tmpPorts, newPorts.list[t]);
 							if (err != RS485EMULE_SUCCESS) break;
 						}
 					}
 				}
 
 				if (err == RS485EMULE_SUCCESS) {
-					if (size_FilesList(tmpPorts) == 2) {
+					if (_size_FilesList(tmpPorts) == 2) {
 						// [!] ports[0] is for the user's applications; ports[1] is connected to the BUS
 						char bport[PATH_MAX];
 						char dport[PATH_MAX];
@@ -397,8 +403,8 @@ RS485emErrorCodes create_virtualPort (struct virtualPort* item, virtualPortRole 
 
 						// port used by the (master/slave) client
 						strcat(dport, tmpPorts.list[0]);
-						if (role == vPortSlave) err = push_portsDB(bport, dport, vPortSlave);
-						else                    err = push_portsDB(bport, dport, vPortMaster);
+						if (role == RS485EMULE_PORTSLAVE) err = push_portsDB(bport, dport, RS485EMULE_PORTSLAVE);
+						else                    err = push_portsDB(bport, dport, RS485EMULE_PORTMASTER);
 
 						//
 						// [!] If the BUS emulator is running as root then, in order to allow the user's process to
@@ -422,9 +428,9 @@ RS485emErrorCodes create_virtualPort (struct virtualPort* item, virtualPortRole 
 						err = RS485EMULE_ERROR_EXTTOOLFAILURE;
 				}
 				
-				free_FilesList(&newPorts);
-				free_FilesList(&oldPorts);
-				free_FilesList(&tmpPorts);
+				_free_FilesList(&newPorts);
+				_free_FilesList(&oldPorts);
+				_free_FilesList(&tmpPorts);
 			}
 	
 		} else
@@ -435,7 +441,7 @@ RS485emErrorCodes create_virtualPort (struct virtualPort* item, virtualPortRole 
 }
 
 	
-void print_virtualPort (struct virtualPort item) {
+void print_virtualPort (virtualPort_t item) {
 	//
 	// Description:
 	//	It prints the object's content. It has been developed for debug purples
@@ -449,7 +455,7 @@ void print_virtualPort (struct virtualPort item) {
 }
 
 
-RS485emErrorCodes send_virtualPort (struct virtualPort item, const void *data, chunkDataSize_type size) {
+RS485emErrorCodes send_virtualPort (virtualPort_t item, const void *data, chunkDataSize_type size) {
 	//
 	// Description:
 	//	It sends the argument defined bytes to the virtual fake device
@@ -480,7 +486,7 @@ RS485emErrorCodes send_virtualPort (struct virtualPort item, const void *data, c
 }
 
 
-RS485emErrorCodes recv_virtualPort (struct virtualPort item, void *data, chunkDataSize_type size) {
+RS485emErrorCodes recv_virtualPort (virtualPort_t item, void *data, chunkDataSize_type size) {
 	//
 	// Description:
 	//	It read from the virtual fake device the argument defined (size) number of bytes
@@ -512,7 +518,7 @@ RS485emErrorCodes recv_virtualPort (struct virtualPort item, void *data, chunkDa
 }
 
 
-RS485emErrorCodes close_virtualPort (struct virtualPort *item) {
+RS485emErrorCodes close_virtualPort (virtualPort_t *item) {
 	//
 	// Description
 	//	This function is used by the BUS emulator process to close the file descriptos associated to a port released by the

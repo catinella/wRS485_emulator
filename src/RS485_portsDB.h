@@ -15,7 +15,8 @@
 // Language: C
 // 
 // Description:
-//	This module provides functions to manage the ports-list database file and its concurrent access too.
+//	This module is used just by the RS485_virtualPortsList one, and it provides functions to manage the ports-list tored in
+//    the database file and its concurrent access too.
 //	
 //	Symbols:
 //		RS485_PORTSDBFILE   SQLight DB file
@@ -42,7 +43,7 @@ typedef uint8_t portsDBindexType;
 //
 RS485emErrorCodes init_portsDB      ();
 void              close_portsDB     ();
-RS485emErrorCodes push_portsDB      (const char *busport, const char *devport, virtualPortRole role);
+RS485emErrorCodes push_portsDB      (const char *busport, const char *devport, virtualPortRole_t role);
 RS485emErrorCodes usedPorts_portsDB (char **portsList);
 void              print_portsDB     ();
 RS485emErrorCodes pidChk_portsDB    (const char *port);

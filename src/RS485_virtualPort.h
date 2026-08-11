@@ -41,25 +41,25 @@ typedef uint16_t chunkDataSize_type;
 #define RS485EMULE_PORTSMAKER_ARG2 "pty,raw,echo=0" 
 #define RS485EMULE_PORTSMAKER_ARG3 "pty,raw,echo=0"
 
-typedef enum _virtualPortRole {
-	vPortMaster = 0,
-	vPortSlave  = 1
-} virtualPortRole;
+typedef enum {
+	RS485EMULE_PORTMASTER,
+	RS485EMULE_PORTSLAVE
+} virtualPortRole_t;
 
-struct virtualPort {
+typedef struct {
 	pid_t   pid;
 	char    port[PATH_MAX];
 	int     fd;
-};
+} virtualPort_t;
 
 
-void                init_virtualPort    (struct virtualPort *item);
-struct virtualPort* new_virtualPort     ();
-RS485emErrorCodes   free_virtualPort    (struct virtualPort *item);
-RS485emErrorCodes   create_virtualPort  (struct virtualPort *item, virtualPortRole role);
-RS485emErrorCodes   open_virtualPort    (struct virtualPort *item);
-void                print_virtualPort   (struct virtualPort item);
-RS485emErrorCodes   send_virtualPort    (struct virtualPort item, const void *data, chunkDataSize_type size);
-RS485emErrorCodes   recv_virtualPort    (struct virtualPort item, void *data,       chunkDataSize_type size);
-RS485emErrorCodes   close_virtualPort   (struct virtualPort *item);
+void                init_virtualPort    (virtualPort_t *item);
+virtualPort_t*      new_virtualPort     ();
+RS485emErrorCodes   free_virtualPort    (virtualPort_t *item);
+RS485emErrorCodes   create_virtualPort  (virtualPort_t *item, virtualPortRole_t role);
+RS485emErrorCodes   open_virtualPort    (virtualPort_t *item);
+void                print_virtualPort   (virtualPort_t item);
+RS485emErrorCodes   send_virtualPort    (virtualPort_t item, const void *data, chunkDataSize_type size);
+RS485emErrorCodes   recv_virtualPort    (virtualPort_t item, void *data,       chunkDataSize_type size);
+RS485emErrorCodes   close_virtualPort   (virtualPort_t *item);
 #endif

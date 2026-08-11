@@ -15,7 +15,7 @@
 // Language: C
 // 
 // Description:
-//	
+//	This is a library of generic function used by the other project's module
 //	
 -------------------------------------------------------------------------------------------------------------------------------*/
 #ifndef RS485COMMONLIB

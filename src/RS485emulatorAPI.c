@@ -46,7 +46,7 @@
 static sqlite3 *portsDB = NULL;
 static char    rs485_updateTool[PATH_MAX];
 
-static int getMasterPortCB (void *portname, int count, char **data, char **columns) {
+static int _getMasterPortCB (void *portname, int count, char **data, char **columns) {
 	//
 	// Description
 	//	This callback is executed to read the name of the port usdd by the software fake-master
@@ -59,11 +59,11 @@ static int getMasterPortCB (void *portname, int count, char **data, char **colum
 	return(0);
 }
 
-static int getPortStatusCB (void *err, int count, char **data, char **columns) {
+static int _getPortStatusCB (void *err, int count, char **data, char **columns) {
 	//
 	// Description
-	//	This callback is executed to evaluate the port status and if it is in-use by another process
-	//	It was originally deveoped to be used just by release_RS485emulatorAPI() function
+	//	This callback is executed to evaluate the port status and if it is in-use by another process.
+	//	It is deveoped to be used just by release_RS485emulatorAPI() function
 	//
 	// Arguments:
 	//	<custom> - Used to exchange data from/to the caller code
@@ -102,7 +102,7 @@ static int getPortStatusCB (void *err, int count, char **data, char **columns) {
 }
 
 
-int sqlTransaction (sqlite3 *db, const char *op) {
+int _sqlTransaction (sqlite3 *db, const char *op) {
 	//
 	// Description:
 	//	This function is used to open or close a sqlite-transaction
@@ -128,8 +128,10 @@ int sqlTransaction (sqlite3 *db, const char *op) {
 RS485emErrorCodes init_RS485emulatorAPI(void) {
 	//
 	// Description:
-	//	It initializes the module's 'static values. This function must be called before then any other one belongs to
+	//	It initializes the module's static values. This function must be called before then any other one belongs to
 	//	this module
+	//
+	//	[!] rs485_updateTool
 	//
 	// Returned value:
 	//	RS485EMULE_SUCCESS
@@ -138,7 +140,7 @@ RS485emErrorCodes init_RS485emulatorAPI(void) {
 	RS485emErrorCodes err = RS485EMULE_SUCCESS;
 
 	#if TESTMODE > 0
-	sprintf(rs485_updateTool, "%s/%s", PRJHOME, RS485EMULE_UPDATECMD);
+	sprintf(rs485_updateTool, "%s/src/%s", PRJHOME, RS485EMULE_UPDATECMD);
 	#else
 	sprintf(rs485_updateTool, "%s/bin/%s", PREFIX, RS485EMULE_UPDATECMD);
 	#endif
@@ -183,18 +185,19 @@ RS485emErrorCodes getMPort_RS485emulatorAPI (char *fpname) {
 
 	*port = '\0';
 
-	rc = sqlTransaction(portsDB, "BEGIN;");
+	rc = _sqlTransaction(portsDB, "BEGIN;");
 	if (rc == SQLITE_OK) {
 
 		sprintf(sqlStatement, "SELECT devPort FROM portsDB WHERE role=\"M\";");
-		rc = sqlite3_exec(portsDB, sqlStatement, getMasterPortCB, (void*)port, NULL);
+		rc = sqlite3_exec(portsDB, sqlStatement, _getMasterPortCB, (void*)port, NULL);
 		if (rc != SQLITE_OK) {
+			// ERROR!
 			err = RS485EMULE_ERROR_INTERNAL;
 			ERRORBANNER(err)
 			
 		} else if (strlen(port) > 0) {
 			sprintf(sqlStatement, "SELECT pid FROM portsDB WHERE devPort=\"%s\";", port);
-			rc = sqlite3_exec(portsDB, sqlStatement, getPortStatusCB, (void*)&err, NULL);
+			rc = sqlite3_exec(portsDB, sqlStatement, _getPortStatusCB, (void*)&err, NULL);
 			
 			if (rc != SQLITE_OK) {
 				err = RS485EMULE_ERROR_INTERNAL;
@@ -206,10 +209,12 @@ RS485emErrorCodes getMPort_RS485emulatorAPI (char *fpname) {
 					err = RS485EMULE_SUCCESS;
 					strcpy(fpname, port);
 					if (system(rs485_updateTool) != 0) {
+						// ERROR!
 						err = RS485EMULE_ERROR_EXTTOOLFAILURE;
 						ERRORBANNER(err)
 					}
 				} else {
+					// ERROR!
 					err = RS485EMULE_ERROR_INTERNAL;
 					ERRORBANNER(err)
 				}
@@ -220,7 +225,7 @@ RS485emErrorCodes getMPort_RS485emulatorAPI (char *fpname) {
 			}
 		}		
 		
-		rc = sqlTransaction(portsDB, "END;");
+		rc = _sqlTransaction(portsDB, "END;");
 
 	} else if (rc == SQLITE_BUSY) {
 		// ERROR!
@@ -254,11 +259,11 @@ RS485emErrorCodes release_RS485emulatorAPI (const char *serialport) {
 	int               rc;
 	
 	DBGTRACE
-	rc = sqlTransaction(portsDB, "BEGIN;");
+	rc = _sqlTransaction(portsDB, "BEGIN;");
 	if (rc == SQLITE_OK) {
 
 		sprintf(sqlStatement, "SELECT pid FROM portsDB WHERE devPort=\"%s\";", serialport);
-		rc = sqlite3_exec(portsDB, sqlStatement, getPortStatusCB, (void*)&err, NULL);
+		rc = sqlite3_exec(portsDB, sqlStatement, _getPortStatusCB, (void*)&err, NULL);
 	
 		if (rc != SQLITE_OK) {
 			err = RS485EMULE_ERROR_INTERNAL;
@@ -282,7 +287,7 @@ RS485emErrorCodes release_RS485emulatorAPI (const char *serialport) {
 				fprintf(stderr, "SQLite(%d): %s\n", rc, sqlite3_errstr(rc));
 				#endif
 				
-			} else if ((rc = sqlTransaction(portsDB, "END;")) &&rc != SQLITE_OK) {
+			} else if ((rc = _sqlTransaction(portsDB, "END;")) &&rc != SQLITE_OK) {
 				// ERROR!
 				err = RS485EMULE_ERROR_INTERNAL;
 				ERRORBANNER(err)
@@ -334,7 +339,7 @@ RS485emErrorCodes takePort_RS485emulatorAPI (char *port) {
 	int               rc;
 	
 	DBGTRACE
-	rc = sqlTransaction(portsDB, "BEGIN;");
+	rc = _sqlTransaction(portsDB, "BEGIN;");
 	if (rc == SQLITE_OK) {
 
 		if (sqlite3_prepare(portsDB, sqlStatement, -1, &stmt, NULL) == SQLITE_OK) {
@@ -398,7 +403,7 @@ RS485emErrorCodes takePort_RS485emulatorAPI (char *port) {
 		}
 	
 		if (err <= 64) {
-			rc = sqlTransaction(portsDB, "END;");
+			rc = _sqlTransaction(portsDB, "END;");
 			if (rc != SQLITE_OK) {
 				// ERROR!
 				err = RS485EMULE_ERROR_UNKNOWN;
