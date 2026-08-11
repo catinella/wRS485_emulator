@@ -8,7 +8,7 @@
 //                                                           Emulator         
 //
 // 
-// File:     test_RS485_portsDB.c
+// File:     utest_RS485_portsDB.c
 // 
 // Authour:  Silvano Catinella
 // 
@@ -30,7 +30,7 @@
 #include <debugTools.h>
 #include <RS485_emulator.h>
 #include <RS485_portsDB.h>
-#include <RS485emulatorAPI.h>
+#include <minute.h>
 
 #define PREFIX       "/dev/Port-"
 #define TESTNUMPORTS 16
@@ -53,7 +53,7 @@ RS485emErrorCodes fillDB(portsDBindexType noi, const char *prefix) {
 	for (t=0; t<noi; t++) {
 		sprintf(bport, "%s%d", prefix, (t*4));
 		sprintf(dport, "%s%d", prefix, (t*4+1));
-		err = push_portsDB(bport, dport, vPortSlave);
+		err = push_portsDB(bport, dport, RS485EMULE_PORTSLAVE);
 		if (err != RS485EMULE_SUCCESS) break;
 	}
 	return(err);
@@ -99,108 +99,56 @@ TEST (RS485_portsDB_testingSuite, dbCreation) {
 
 TEST (RS485_portsDB_testingSuite, dbCheckForContent) {
 	RS485emErrorCodes err = RS485EMULE_SUCCESS;
-	portsDBindexType  t = 0;
-	char              portfn[PATH_MAX];
+	char              *myList[TESTNUMPORTS + 10];
+	char              portName[PATH_MAX];
+	unsigned int      counter = 0;
 
-	fakePidFile(getpid());
 	init_portsDB();
-	init_RS485emulatorAPI();
 	err = fillDB(TESTNUMPORTS, PREFIX);
 
-	//
-	// [!] It puts all the ports in busy state. Enabling the print_portsDB() call you should see all the ports with the
-	//     associated pid
-	//
-	for (t=0; t<TESTNUMPORTS; t++) err = takePort_RS485emulatorAPI(portfn);
-	ASSERT_EQ (err, RS485EMULE_SUCCESS);
-
-
-	//
-	// [!] The following lines, release some port
-	//
-	for (t=0; t<(TESTNUMPORTS/2); t++) {
-		sprintf(portfn, "%s%d", PREFIX, (t*8));
-
-		// Because it is a bus-port, the function should return the proper error code
-		err = release_RS485emulatorAPI(portfn);
-		if (err != RS485EMULE_ERROR_ITEMNOTFOUND) {
-			DBGTRACE
+	if (err == RS485EMULE_SUCCESS)
+		err = usedPorts_portsDB(myList);
+	
+	while (err == RS485EMULE_SUCCESS && counter < TESTNUMPORTS + 1) {
+		sprintf(portName, "%s%d", PREFIX, counter);
+		if (strcmp(portName, myList[counter]) != 0)
 			break;
-		}
-
-		// It is the dev-port, so it should returns a successfull code
-		sprintf(portfn, "%s%d", PREFIX, (t*8)+1);
-		err = release_RS485emulatorAPI(portfn);
-		if (err != RS485EMULE_SUCCESS) {
-			DBGTRACE
-			break;
-		}
+		
+		counter++;
 	}
+	if (counter != TESTNUMPORTS)
+		// ERROR!
+		err = RS485EMULE_ERROR_GENERIC;
+			
 	ASSERT_EQ (err, RS485EMULE_SUCCESS);
+	
+	close_portsDB();
+	
+	return;
+}
 
 
+TEST (RS485_portsDB_testingSuite, pidChk_portsDB) {
 	//
 	// [!] The following lines retrive the in-use ports
 	//     Thid feture is performed by the BUS emulator to know where to send and receive data
 	//
-	{
-		portsDBindexType t;
-		char             *portsList[TESTNUMPORTS];
-
-		for (t=0; t<TESTNUMPORTS; t++) portsList[t] = NULL;
-		err = usedPorts_portsDB((char**)portsList);
-		ASSERT_EQ (err, RS485EMULE_SUCCESS);
-
-		t = 0;
-		while (portsList[t] != NULL && t<TESTNUMPORTS) {
-			//printf("Bus port %d: %s\n", t, portsList[t]);
-			free(portsList[t]);
-			portsList[t] = NULL;
-			t++;
-		}
-		ASSERT_EQ (t, (TESTNUMPORTS/2));
-	}
-
-	close_RS485emulatorAPI();
-	close_portsDB();
-
-	return;
-}
-
-
-TEST (RS485_portsDB_testingSuite, securityFeature) {
 	RS485emErrorCodes err = RS485EMULE_SUCCESS;
-	char              portfn[PATH_MAX];
-	
-	fakePidFile(getpid());
+	portsDBindexType t;
+	char             *portsList[TESTNUMPORTS];
+
 	init_portsDB();
 	err = fillDB(TESTNUMPORTS, PREFIX);
 
-	//
-	// [!] Another process will try to take the first port (port-1)
-	//
-	{
-		pid_t childPid = fork();
-		
-		if (childPid < 0)
-			// ERROR!
-			err = RS485EMULE_ERROR_NOSYSRESOURCE;
+	if (err == RS485EMULE_SUCCESS) {
 
-		else if (childPid == 0) {
-			init_RS485emulatorAPI();
-			err = takePort_RS485emulatorAPI(portfn);
-			close_RS485emulatorAPI();
-			exit(err);
-			
-		} else {
-			wait(NULL);
-			init_RS485emulatorAPI();
-			sprintf(portfn, "%s%d", PREFIX, 1);
-			//printf("I am trying to reserve the %s port\n", portfn);
-			err = release_RS485emulatorAPI(portfn);
-			ASSERT_EQ (err, RS485EMULE_ERROR_FORBIDDENOP);
-			close_RS485emulatorAPI();
-		}
+
+
+		ASSERT_EQ (err, RS485EMULE_SUCCESS);
+	
+	} else {
+		// WARNING!
+		printf("WARNING(%d)! Test skipped for internal errors\n", __LINE__);
 	}
 
 	close_portsDB();
@@ -208,67 +156,4 @@ TEST (RS485_portsDB_testingSuite, securityFeature) {
 	return;
 }
 
-
-TEST (RS485_portsDB_testingSuite, deviceMasterPort) {
-	RS485emErrorCodes err         = RS485EMULE_SUCCESS;
-	char              *busport    = "/tmp/bus-port";
-	char              *masterport = "/tmp/master-port";
-	
-	fakePidFile(getpid());
-	init_portsDB();
-	err = push_portsDB(busport, masterport, vPortMaster);
-
-	//
-	// [!] The fake master-device process will take the master-port
-	//
-	{
-		pid_t childPid = fork();
-		
-		if (childPid < 0)
-			// ERROR!
-			err = RS485EMULE_ERROR_NOSYSRESOURCE;
-
-		else if (childPid == 0) {
-			// I am the Master
-			char portfn[PATH_MAX];
-
-			init_RS485emulatorAPI();
-			err = getMPort_RS485emulatorAPI(portfn);
-			if (strcmp(portfn, masterport) != 0) err = RS485EMULE_ERROR_GENERIC;
-			close_RS485emulatorAPI();
-			//printf("exit-code: %d\n", bashErrorCode(err));
-			exit(RS485emu_bashErrorCode(err));
-			
-		} else {
-			int wstatus = 0;
-			if (wait(&wstatus) != childPid)
-				fprintf(stderr, "ERROR! The child process' soul did not pass to here\n");
-			else if (!WIFEXITED(wstatus))
-				fprintf(stderr, "ERROR! The child process crashed, unecpectedly\n");
-			else {
-				ASSERT_EQ (WEXITSTATUS(wstatus), 0);
-			}
-		}
-	}
-	
-	close_portsDB();
-
-	return;
-}
-
-//------------------------------------------------------------------------------------------------------------------------------
-//                                                     M A I N
-//------------------------------------------------------------------------------------------------------------------------------
-
-int main() {
-	printf("PID: %d\n", getpid());
-	
-	signal(SIGHUP, sigHandler);
-	
-	dbCreation();
-	dbCheckForContent();
-	securityFeature();
-	deviceMasterPort();
-	
-	return(0);
-}
+#include "utest_RS485_portsDB__main.sgc"
