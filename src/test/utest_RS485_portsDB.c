@@ -32,6 +32,7 @@
 #include <RS485_portsDB.h>
 #include <sqlite3.h>
 #include <minute.h>
+#include <debugTools.h>
 
 #define PREFIX       "/dev/Port-"
 #define TESTNUMPORTS 16
@@ -104,25 +105,25 @@ static int myCB (void *psl, int count, char **data, char **columns) {
 	//	data    - The row's data
 	//	columns - The column names
 	//
-	static portsDBindexType numups = 0;
+	static portsDBindexType idx = 0;
 
 	if (psl == NULL)
 		// Function initialization
-		numups = 0;
+		idx = 0;
 
 	else {
 		struct qRetData *qrd = (struct qRetData*)psl;
 		
-		if (count != 1 || strcmp(columns[0], "busPort") != 0) {
+		if (strcmp(columns[0], "busPort") != 0) {
 			// ERROR! (You should never get this error)
 			qrd->err = RS485EMULE_ERROR_INTERNAL;
 		} else {
-			qrd->list[numups] = strdup(data[0]);
-			qrd->itsNumber = numups;
-			//BGTRACE
+			qrd->list[idx] = strdup(data[0]);
+			qrd->itsNumber = idx;
+			//DBGTRACE
 		}
-		numups++;
-		qrd->list[numups] = NULL;
+		idx++;
+		qrd->list[idx] = NULL;
 		
 	}
 	return(0);
@@ -179,18 +180,19 @@ TEST (RS485_portsDB_testingSuite, dbCheckForContent) {
 	err = fillDB(TESTNUMPORTS, PREFIX);
 
 	if (err == RS485EMULE_SUCCESS) {
-		char            *myList[TESTNUMPORTS];
-		char            *apsList[TESTNUMPORTS];   // all ports list
+		char            *myList[TESTNUMPORTS+2];
+		char            *apsList[TESTNUMPORTS+2];   // all ports list
 		//char            portName[PATH_MAX];
 		sqlite3         *portsDB = NULL;
 		char            sqlStatement[1024];
 		struct qRetData qrd;
 		int             rc;
+		char            *sqliteErrMsg = NULL;
 		
 		//
 		// Initialization...
 		//
-		sprintf(sqlStatement, "SELECT devPort FROM busportDB;");
+		sprintf(sqlStatement, "SELECT busPort FROM portsDB;");
 		for (unsigned int t = 0; t < TESTNUMPORTS; t++) {
 			myList[t] = NULL;
 			apsList[t] = NULL;
@@ -205,13 +207,13 @@ TEST (RS485_portsDB_testingSuite, dbCheckForContent) {
 			// ERROR!
 			printf ("ERROR(%d)! Test procedure intermnally failed\n", __LINE__);
 	
-		else if ((rc = sqlite3_exec(portsDB, sqlStatement, myCB, (void*)&qrd, NULL)) != SQLITE_OK) 
+		else if ((rc = sqlite3_exec(portsDB, sqlStatement, myCB, (void*)&qrd, &sqliteErrMsg)) != SQLITE_OK) 
 			// ERROR!
-			printf ("ERROR(%d)! Test procedure intermnally failed\n", __LINE__);
+			printf ("ERROR(%d)! Test procedure intermnally failed (retcode=%d): %s\n", __LINE__, rc, sqliteErrMsg);
 	
 		else if (qrd.err != RS485EMULE_SUCCESS)
 			// ERROR!
-			printf ("ERROR(%d)! Test procedure intermnally failed\n", __LINE__);
+			printf ("ERROR(%d)! Test procedure intermnally failed (retcode=%d)\n", __LINE__, qrd.err);
 	
 		else {	
 			uint8_t t = 0;
@@ -222,17 +224,16 @@ TEST (RS485_portsDB_testingSuite, dbCheckForContent) {
 				if (x.rem == 0) {
 					sprintf(
 						sqlStatement, 
-						"UPDATE portsDB SET pid=%d WHERE busPort=\"%s\";", 
+						"UPDATE portsDB SET pid=%d WHERE devPort=\"%s\";", 
 						(PIDLIMIT + t), apsList[t]
 					);
-					
 					if (sqlite3_exec(portsDB, sqlStatement, NULL, NULL, NULL) != SQLITE_OK)
 						// ERROR!
 						err = RS485EMULE_ERROR_INTERNAL;
 				}
+				t++;
 			}
 		
-			
 			err = usedPorts_portsDB(myList);
 			ASSERT_EQ (err, RS485EMULE_SUCCESS);
 	
