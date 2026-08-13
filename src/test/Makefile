@@ -157,12 +157,6 @@ fakeMaster%.o:		fakeMaster%.c
 				@$(CC) $(GCCOPTS) -c $< $(INCLPATH) -I. -I../ "-DTESTMODE=$(TESTMODE)" -o $@
 
 
-%-sh.o:			%.c ../%.h
-				@echo "[$(CCLAB)-SH] $@"
-				@$(CC) $(GCCOPTS) -Wall -Wextra -pedantic -fPIC -shared  -c $< $(INCLPATH) -I. -o $@ \
-					"-DTESTMODE=0" "-DPREFIX=\"$(PREFIX)\"" "-D__DEBUG__=$(DEBUG)" 
-
-
 %.o:				../%.c ../%.h
 				@echo "[$(CCLAB) 5] $@"
 				@$(CC) $(GCCOPTS) -c $< $(INCLPATH) -I. -I../ "-DTESTMODE=$(TESTMODE)" -o $@
@@ -174,7 +168,7 @@ fakeMaster%.o:		fakeMaster%.c
 
 utest_%.c:			utest_RS485_%.o ../%.o
 				@echo "[LD C2] $@"
-				@LD_LIBRARY_PATH="../" $(CC) -Wall -L../ -o $@ $^ -lsqlite3 $(PRJLIB_L)
+				@LD_LIBRARY_PATH="../" $(CC) -Wall -L../ -o $@ $^ -lsqlite3 
 
 
 test_RS485_virtualPort:	test_RS485_virtualPort.o
@@ -202,14 +196,13 @@ test_RS485_%:		../RS485_%.o test_RS485_%.o libForTests.o
 				@LD_LIBRARY_PATH="../" $(CC) -Wall -L../ -o $@ $^ -lm $(PRJLIB_L)
 
 
-utest_%:			utest_%.o libForTests.o %.o ../RS485_commonLib.o
+utest_%:			utest_%.o libForTests.o %.o RS485_commonLib.o
 				@echo "[LD 4] $@"
-				@LD_LIBRARY_PATH="../" $(CC) -Wall -L../ -Wl,-rpath,'$$ORIGIN/..' -o $@ $^ -lm -lMinuteC -lsqlite3
+				@$(CC) -Wall -o $@ $^ -lm -lMinuteC -lsqlite3
 
 
-utest_%:			utest_%.o libForTests.o
+utest_%:			utest_%.o libForTests.o RS485_commonLib.o
 				@echo "[LD 5] $@"
-				@LD_LIBRARY_PATH="../" $(CC) -Wall -L../ -Wl,-rpath,'$$ORIGIN/..' -o $@ \
-					$^ -lm $(PRJLIB_L) -lMinuteC -lsqlite3
+				@$(CC) -Wall -o $@ $^ -lm -lMinuteC -lsqlite3
 
 
