@@ -33,7 +33,11 @@
 #include <RS485_emulator.h>
 #include <RS485_virtualPort.h>
 
+#if TESTMODE > 0
 #define RS485_PORTSDBFILE   "/tmp/RS485_emulator.db"
+#else
+#define RS485_PORTSDBFILE   "/var/lib/RS485_emulator.db"
+#endif
 
 typedef uint8_t portsDBindexType;
 
