@@ -1,3 +1,4 @@
 utest_libForTests
 utest_RS485_portsDB
+utest_RS485_virtualPort
 *.sgc
