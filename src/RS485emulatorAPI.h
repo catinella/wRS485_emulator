@@ -28,10 +28,10 @@
 
 #define RS485EMULE_UPDATECMD "RS485_updateSignal"
 
-RS485emErrorCodes init_RS485emulatorAPI     (void);
+RS485emErrorCodes_t init_RS485emulatorAPI     (void);
 void              close_RS485emulatorAPI    (void);
-RS485emErrorCodes release_RS485emulatorAPI  (const char *serialport);
-RS485emErrorCodes takePort_RS485emulatorAPI (char *port);
-RS485emErrorCodes getMPort_RS485emulatorAPI (char *fpname);
+RS485emErrorCodes_t release_RS485emulatorAPI  (const char *serialport);
+RS485emErrorCodes_t takePort_RS485emulatorAPI (char *port);
+RS485emErrorCodes_t getMPort_RS485emulatorAPI (char *fpname);
 
 #endif

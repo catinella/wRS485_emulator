@@ -45,12 +45,12 @@ typedef uint8_t portsDBindexType;
 //
 // Used by the BUS emulator
 //
-RS485emErrorCodes init_portsDB      ();
-void              close_portsDB     ();
-RS485emErrorCodes push_portsDB      (const char *busport, const char *devport, virtualPortRole_t role);
-RS485emErrorCodes usedPorts_portsDB (char **portsList);
-void              print_portsDB     ();
-RS485emErrorCodes pidChk_portsDB    (const char *port);
+RS485emErrorCodes_t init_portsDB      ();
+void                close_portsDB     ();
+RS485emErrorCodes_t push_portsDB      (const char *busport, const char *devport, virtualPortRole_t role);
+RS485emErrorCodes_t usedPorts_portsDB (char **portsList);
+void                print_portsDB     ();
+RS485emErrorCodes_t pidChk_portsDB    (const char *port);
 
 
 #endif

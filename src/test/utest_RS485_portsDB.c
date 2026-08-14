@@ -42,7 +42,7 @@ bool signalFlag = false;
 struct qRetData {
 	char              **list;
 	unsigned int      itsNumber;
-	RS485emErrorCodes err;
+	RS485emErrorCodes_t err;
 };
 
 #define PIDLIMIT 7200
@@ -112,7 +112,7 @@ bool _search_portsList(const char *port, const char **list) {
 */
 
 
-RS485emErrorCodes _fillDB(portsDBindexType noi, const char *prefix) {
+RS485emErrorCodes_t _fillDB(portsDBindexType noi, const char *prefix) {
 	//
 	// Description:
 	//	It fills the DB with foo values composed bt the argument defined prefix and a numerical suffix
@@ -127,7 +127,7 @@ RS485emErrorCodes _fillDB(portsDBindexType noi, const char *prefix) {
 	portsDBindexType  t = 0;
 	char              bport[PATH_MAX];
 	char              dport[PATH_MAX];
-	RS485emErrorCodes err = RS485EMULE_SUCCESS;
+	RS485emErrorCodes_t err = RS485EMULE_SUCCESS;
 	
 	for (t=0; t<noi; t++) {
 		sprintf(bport, "%s%d", prefix, (t*4));
@@ -283,7 +283,7 @@ TEST (RS485_portsDB_testingSuite, dbCreation) {
 	// Description:
 	//	It tests the functions to open the dtatabase, write foo-data inside it, and close it.
 	//
-	RS485emErrorCodes err = RS485EMULE_SUCCESS;
+	RS485emErrorCodes_t err = RS485EMULE_SUCCESS;
 	
 	err = init_portsDB();
 	ASSERT_EQ (err, RS485EMULE_SUCCESS);
@@ -304,7 +304,7 @@ TEST (RS485_portsDB_testingSuite, dbCheckForContent) {
 	//	 4) It tests the usedPorts_portsDB() function
 	//	 5) It checks for the list size
 	//
-	RS485emErrorCodes err = RS485EMULE_SUCCESS;
+	RS485emErrorCodes_t err = RS485EMULE_SUCCESS;
 
 	// Module initialization
 	init_portsDB();
@@ -370,7 +370,7 @@ TEST (RS485_portsDB_testingSuite, pidChk_portsDB) {
 	//	 3) It tests the usedPorts_portsDB() function
 	//	 4) It checks for the list size
 	//
-	RS485emErrorCodes err = RS485EMULE_SUCCESS;
+	RS485emErrorCodes_t err = RS485EMULE_SUCCESS;
 
 	init_portsDB();
 	

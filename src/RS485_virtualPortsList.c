@@ -65,7 +65,7 @@ void print_virtualPortsList (virtualPortsList_t *list) {
 }
 
 
-RS485emErrorCodes add_virtualPortsList (virtualPortsList_t *list) {
+RS485emErrorCodes_t add_virtualPortsList (virtualPortsList_t *list) {
 	//
 	// Description:
 	//	It creates a new emply virtual port, it uses the port to make a list item, and add the item to the list tail
@@ -74,7 +74,7 @@ RS485emErrorCodes add_virtualPortsList (virtualPortsList_t *list) {
 	//	see the create_virtualPort() documentation
 	//
 	virtualPortsListItem_t *item = NULL;
-	RS485emErrorCodes       err   = RS485EMULE_SUCCESS;
+	RS485emErrorCodes_t       err   = RS485EMULE_SUCCESS;
 
 	// List item creation
 	item = (virtualPortsListItem_t*)malloc(sizeof(virtualPortsListItem_t));
@@ -95,7 +95,7 @@ RS485emErrorCodes add_virtualPortsList (virtualPortsList_t *list) {
 }
 
 
-RS485emErrorCodes update_virtualPortsList (virtualPortsList_t *list, const char **busports) {
+RS485emErrorCodes_t update_virtualPortsList (virtualPortsList_t *list, const char **busports) {
 	//
 	// Description:
 	//	It accepts a list of file names of assigned ports and set the argument defined virtual ports list considering the
@@ -108,7 +108,7 @@ RS485emErrorCodes update_virtualPortsList (virtualPortsList_t *list, const char 
 	virtualPortsListItem_t *item = NULL;
 	virtualPort_t          *myport = NULL;
 	int                    i     = 0;
-	RS485emErrorCodes      err   = RS485EMULE_SUCCESS;
+	RS485emErrorCodes_t      err   = RS485EMULE_SUCCESS;
 	
 	if (list->head == NULL || list->tail == NULL)
 		// ERROR! (the list is empty)
@@ -228,7 +228,7 @@ void free_virtualPortsList (virtualPortsList_t *list) {
 }
 
 
-RS485emErrorCodes pidsChk_virtualPortsList (virtualPortsList_t *list) {
+RS485emErrorCodes_t pidsChk_virtualPortsList (virtualPortsList_t *list) {
 	//
 	// Description:
 	//	It checks for ports owned by dead processes and releases the ports 
@@ -239,7 +239,7 @@ RS485emErrorCodes pidsChk_virtualPortsList (virtualPortsList_t *list) {
 	//	pidChk_portsDB() exit codes
 	//
 	virtualPortsListItem_t *ptr  = NULL;
-	RS485emErrorCodes      err   = RS485EMULE_WARNING_NOTHINGTODO;
+	RS485emErrorCodes_t      err   = RS485EMULE_WARNING_NOTHINGTODO;
 	bool                   flag  = false;
 		
 	for (ptr = list->head; ptr != NULL; ptr = ptr->next) {

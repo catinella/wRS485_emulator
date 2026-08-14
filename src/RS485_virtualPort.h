@@ -55,11 +55,11 @@ typedef struct {
 
 void                init_virtualPort    (virtualPort_t *item);
 virtualPort_t*      new_virtualPort     ();
-RS485emErrorCodes   free_virtualPort    (virtualPort_t *item);
-RS485emErrorCodes   create_virtualPort  (virtualPort_t *item, virtualPortRole_t role);
-RS485emErrorCodes   open_virtualPort    (virtualPort_t *item);
+RS485emErrorCodes_t free_virtualPort    (virtualPort_t *item);
+RS485emErrorCodes_t create_virtualPort  (virtualPort_t *item, virtualPortRole_t role);
+RS485emErrorCodes_t open_virtualPort    (virtualPort_t *item);
 void                print_virtualPort   (virtualPort_t item);
-RS485emErrorCodes   send_virtualPort    (virtualPort_t item, const void *data, chunkDataSize_type size);
-RS485emErrorCodes   recv_virtualPort    (virtualPort_t item, void *data,       chunkDataSize_type size);
-RS485emErrorCodes   close_virtualPort   (virtualPort_t *item);
+RS485emErrorCodes_t send_virtualPort    (virtualPort_t item, const void *data, chunkDataSize_type size);
+RS485emErrorCodes_t recv_virtualPort    (virtualPort_t item, void *data,       chunkDataSize_type size);
+RS485emErrorCodes_t close_virtualPort   (virtualPort_t *item);
 #endif

@@ -65,16 +65,20 @@
 #define DBGTRACE ;
 #endif
 
+// Maximum number of files in any list
 #define RS485_FILESMAX 1024
 
-struct filesList {
+typedef struct {
 	char *list[RS485_FILESMAX];
-};
+} filesList_t;
+
+static bool initFlag = false;
+
 //------------------------------------------------------------------------------------------------------------------------------
 //                                    P R I V A T E   F U N C T I O N S 
 //------------------------------------------------------------------------------------------------------------------------------
 
-static void _free_FilesList (struct filesList *files) {
+static void _free_FilesList (filesList_t *files) {
 	//
 	// Desription:
 	//	It free al system resources used to store the filenames list. [!] the list must be NULL terminated
@@ -92,28 +96,34 @@ static void _free_FilesList (struct filesList *files) {
 };
 
 
-static void _init_FilesList (struct filesList *files) {
+static void _init_FilesList (filesList_t *files) {
 	//
 	// Description:
 	//	Structure initialization
 	//
 	uint16_t t;
-	for (t=0; t<RS485_FILESMAX; t++) files->list[t] = NULL;
+	if (initFlag == false) {
+		init_portsDB();
+		initFlag = true;
+	}
+	for (t=0; t<RS485_FILESMAX; t++) {
+		files->list[t] = NULL;
+	}
 	return;
 }
 
 
-static RS485emErrorCodes _getDirContent (const char *path, struct filesList *files) {
+static RS485emErrorCodes_t _getDirContent (const char *path, filesList_t *files) {
 	//
 	// Desription:
-	//	It stores the files belong to the "path" argument defined folder in the "filesList" given array
+	//	It stores the files belong to the "path" argument defined folder in the "filesList" given struct
 	//
 	// Returned value:
 	//	RS485EMULE_SUCCESS
 	//	RS485EMULE_ERROR_IOFAILED
 	//	RS485EMULE_ERROR_DATAOVERFLOW
 	//
-	RS485emErrorCodes err = RS485EMULE_SUCCESS;
+	RS485emErrorCodes_t err = RS485EMULE_SUCCESS;
 	DIR           *dh = NULL;
 	struct dirent *entry;
 	uint16_t      counter = 0;
@@ -140,7 +150,7 @@ static RS485emErrorCodes _getDirContent (const char *path, struct filesList *fil
 }
 
 
-static RS485emErrorCodes _search_FilesList (struct filesList files, const char *target) {
+static RS485emErrorCodes_t _search_FilesList (filesList_t files, const char *target) {
 	//
 	// Description:
 	//	It looks for the "target" argument defined string in the "files" list.
@@ -149,7 +159,7 @@ static RS485emErrorCodes _search_FilesList (struct filesList files, const char *
 	//	RS485EMULE_SUCCESS
 	//	RS485EMULE_WARNING_ITEMNOTFOUND
 	//
-	RS485emErrorCodes err = RS485EMULE_WARNING_ITEMNOTFOUND;
+	RS485emErrorCodes_t err = RS485EMULE_WARNING_ITEMNOTFOUND;
 	uint16_t          t;
 	
 	for (t=0; t<RS485_FILESMAX; t++) {
@@ -164,7 +174,7 @@ static RS485emErrorCodes _search_FilesList (struct filesList files, const char *
 }
 
 
-static RS485emErrorCodes _push_FilesList (struct filesList *files, const char *filename) {
+static RS485emErrorCodes_t _push_FilesList (filesList_t *files, const char *filename) {
 	//
 	// Description:
 	//	It adds a new item to the argument defined list
@@ -173,7 +183,7 @@ static RS485emErrorCodes _push_FilesList (struct filesList *files, const char *f
 	//	RS485EMULE_SUCCESS
 	//	RS485EMULE_ERROR_DATAOVERFLOW
 	//
-	RS485emErrorCodes err = RS485EMULE_SUCCESS;
+	RS485emErrorCodes_t err = RS485EMULE_SUCCESS;
 	uint16_t          t;
 	
 	for (t=0; t<RS485_FILESMAX; t++) {
@@ -186,7 +196,7 @@ static RS485emErrorCodes _push_FilesList (struct filesList *files, const char *f
 }
 
 
-static uint16_t _size_FilesList (struct filesList files) {
+static uint16_t _size_FilesList (filesList_t files) {
 	//
 	// Description:
 	//	It returns the number of stored items
@@ -210,23 +220,24 @@ void init_virtualPort (virtualPort_t *item) {
 	//
 	item->pid = 0;
 	item->fd  = -1;
-	memset((void*)item->port, 0, (PATH_MAX*sizeof(char)));
+	memset((void*)item->port, 0, (PATH_MAX * sizeof(char)));
 	return;
 }
 
 
-RS485emErrorCodes free_virtualPort (virtualPort_t *item) {
+RS485emErrorCodes_t free_virtualPort (virtualPort_t *item) {
 	//
 	// Description:
-	//	It releases the resources allocated for the argument defined struct, previousely.
-	//	[!] This function is called by the emulator process in its shouting down procedure, only.
+	//	It releases the previousely allocated resources used by the argument defined struct. The procedure will kill the
+	//	port owner process, too.
+	//	[!] This function is called by the emulator process during its shouting-down procedure, only.
 	//
 	// Returned code:
 	//	RS485EMULE_SUCCESS
 	//	RS485EMULE_WARNING_NOTHINGTODO
 	//
 	char              status;
-	RS485emErrorCodes err = RS485EMULE_SUCCESS;
+	RS485emErrorCodes_t err = RS485EMULE_SUCCESS;
 	
 	// Port's channel closing
 	if (item->fd > 0) close(item->fd);
@@ -253,6 +264,7 @@ RS485emErrorCodes free_virtualPort (virtualPort_t *item) {
 			waitpid(item->pid, &wstatus, WNOHANG);
 		}
 	} else
+		// WARNING! (port not in use)
 		err = RS485EMULE_WARNING_NOTHINGTODO;
 	
 	init_virtualPort(item);
@@ -273,7 +285,7 @@ virtualPort_t* new_virtualPort() {
 }
 
 
-RS485emErrorCodes open_virtualPort (virtualPort_t* item) {
+RS485emErrorCodes_t open_virtualPort (virtualPort_t* item) {
 	//
 	// Description:
 	//	This function allows you to open the virtual serial port
@@ -284,7 +296,7 @@ RS485emErrorCodes open_virtualPort (virtualPort_t* item) {
 	//	RS485EMULE_ERROR_IOFAILED       I cannot open the port
 	//	RS485EMULE_ERROR_NOSYSRESOURCE  Port setting procedure failed 
 	//
-	RS485emErrorCodes err = RS485EMULE_SUCCESS;
+	RS485emErrorCodes_t err = RS485EMULE_SUCCESS;
 	struct termios    options;
 
 	if (item->fd < 0)
@@ -312,16 +324,17 @@ RS485emErrorCodes open_virtualPort (virtualPort_t* item) {
 }
 
 
-RS485emErrorCodes create_virtualPort (virtualPort_t* item, virtualPortRole_t role) {
+RS485emErrorCodes_t create_virtualPort (virtualPort_t* item, virtualPortRole_t role) {
 	//
 	// Description:
-	//	This function allows you to create a new virtual serial port
-	//	Every "socat" command call creates 2 linked virtual-ports, always. 
+	//	This function allows you to create a new virtual serial port based on socat tool.
+	//	Every "socat" command call creates 2 linked virtual-ports, and a resident process that will be resposible to move
+	//	data from any of the two to the other
 	//	
-	//	pid=X                         file-a   file-b           pid=y  ppid=X
-	//	+--------------------+       +-----------------+        +-----------+
-	//	| RS485 BUS emulator |<----->| port-a | port-b |<------>|   slave   |
-	//	+--------------------+       +-----------------+        +-----------+
+	//	pid=X           ppid=1        file-a           pid=Y   ppid=X         file-b           pid=W    ppid=Z
+	//	+--------------------+       +--------+        +------------+       +--------+         +-------------+
+	//	| RS485 BUS emulator |<=====>| port-a |<------>| socat proc |<----->| port-b |<=======>| client proc |
+	//	+--------------------+       +--------+        +------------+       +--------+         +-------------+
 	//	
 	// Returned value:
 	//	RS485EMULE_SUCCESS               The object has been set correctly
@@ -330,8 +343,8 @@ RS485emErrorCodes create_virtualPort (virtualPort_t* item, virtualPortRole_t rol
 	//	RS485EMULE_ERROR_NOSYSRESOURCE   There are no resources to fork a new process
 	//	RS485EMULE_ERROR_FORBIDDENOP     File attributes changing operation failed
 	//
-	RS485emErrorCodes err = RS485EMULE_SUCCESS;
-	struct filesList  oldPorts;
+	RS485emErrorCodes_t err = RS485EMULE_SUCCESS;
+	filesList_t  oldPorts;
 
 	_init_FilesList(&oldPorts);
 	err = _getDirContent(RS485EMULE_PORTSFOLDER, &oldPorts);
@@ -354,8 +367,8 @@ RS485emErrorCodes create_virtualPort (virtualPort_t* item, virtualPortRole_t rol
 			exit(RS485EMULE_ERROR_EXTPROCFAILED);
 	
 		} else if (item->pid > 0) {
-			struct filesList newPorts;
-			struct filesList tmpPorts;
+			filesList_t newPorts;
+			filesList_t tmpPorts;
 			
 			//
 			// The process MUST wait for the port creation procedure. For this reason do not set lower then 10ms sleeping time!
@@ -455,7 +468,7 @@ void print_virtualPort (virtualPort_t item) {
 }
 
 
-RS485emErrorCodes send_virtualPort (virtualPort_t item, const void *data, chunkDataSize_type size) {
+RS485emErrorCodes_t send_virtualPort (virtualPort_t item, const void *data, chunkDataSize_type size) {
 	//
 	// Description:
 	//	It sends the argument defined bytes to the virtual fake device
@@ -463,9 +476,9 @@ RS485emErrorCodes send_virtualPort (virtualPort_t item, const void *data, chunkD
 	// Returned value:
 	//	RS485EMULE_SUCCESS
 	//	RS485EMULE_ERROR_IOFAILED
-	//	RS485EMULE_ERROR_INTERNAL
+	//	RS485EMULE_ERROR_ILLEGALARG
 	//
-	RS485emErrorCodes   err = RS485EMULE_SUCCESS;
+	RS485emErrorCodes_t   err = RS485EMULE_SUCCESS;
 	chunkDataSize_type ts  = 0;
 	chunkDataSize_type ps  = 0;
 
@@ -480,13 +493,13 @@ RS485emErrorCodes send_virtualPort (virtualPort_t item, const void *data, chunkD
 		}
 	} else
 		// ERROR!
-		err = RS485EMULE_ERROR_INTERNAL;
+		err = RS485EMULE_ERROR_ILLEGALARG;
 		
 	return(err);
 }
 
 
-RS485emErrorCodes recv_virtualPort (virtualPort_t item, void *data, chunkDataSize_type size) {
+RS485emErrorCodes_t recv_virtualPort (virtualPort_t item, void *data, chunkDataSize_type size) {
 	//
 	// Description:
 	//	It read from the virtual fake device the argument defined (size) number of bytes
@@ -495,9 +508,9 @@ RS485emErrorCodes recv_virtualPort (virtualPort_t item, void *data, chunkDataSiz
 	// Returned value:
 	//	RS485EMULE_SUCCESS           The required data has been succesfully read
 	//	RS485EMULE_ERROR_IOFAILED    read() syscall failed
-	//	RS485EMULE_ERROR_INTERNAL    The port has not been open
+	//	RS485EMULE_ERROR_ILLEGALARG  The port has not been previousely open
 	//
-	RS485emErrorCodes   err = RS485EMULE_SUCCESS;
+	RS485emErrorCodes_t   err = RS485EMULE_SUCCESS;
 	chunkDataSize_type ts  = 0;
 	chunkDataSize_type ps  = 0;
 
@@ -512,13 +525,13 @@ RS485emErrorCodes recv_virtualPort (virtualPort_t item, void *data, chunkDataSiz
 		}
 	} else
 		// ERROR!
-		err = RS485EMULE_ERROR_INTERNAL;
+		err = RS485EMULE_ERROR_ILLEGALARG;
 		
 	return(err);
 }
 
 
-RS485emErrorCodes close_virtualPort (virtualPort_t *item) {
+RS485emErrorCodes_t close_virtualPort (virtualPort_t *item) {
 	//
 	// Description
 	//	This function is used by the BUS emulator process to close the file descriptos associated to a port released by the
@@ -528,7 +541,7 @@ RS485emErrorCodes close_virtualPort (virtualPort_t *item) {
 	//	RS485EMULE_SUCCESS                The port has been correctly closed
 	//	RS485EMULE_WARNING_NOTHINGTODO    The port was already closed
 	//
-	RS485emErrorCodes err = RS485EMULE_SUCCESS;
+	RS485emErrorCodes_t err = RS485EMULE_SUCCESS;
 	if (item->fd < 0)
 		err = RS485EMULE_WARNING_NOTHINGTODO;
 	else {

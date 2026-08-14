@@ -31,7 +31,7 @@
 
 int main() {
 	pid_t             busemPid = 0;
-	RS485emErrorCodes err      =  RS485emu_readPidFile(&busemPid, RS485EMULE_PIDFILE);
+	RS485emErrorCodes_t err      =  RS485emu_readPidFile(&busemPid, RS485EMULE_PIDFILE);
 
 	if (err < 64) kill(busemPid, RS485EMULE_UPDATESIGN);
 

@@ -40,16 +40,16 @@ typedef struct {
 	virtualPortsListItem_t *it;
 } virtualPortsList_t;
 
-void              init_virtualPortsListItem (virtualPortsListItem_t *item);
+void                init_virtualPortsListItem (virtualPortsListItem_t *item);
 
-void              init_virtualPortsList     (virtualPortsList_t *list);
-RS485emErrorCodes add_virtualPortsList      (virtualPortsList_t *list);
-RS485emErrorCodes update_virtualPortsList   (virtualPortsList_t *list, const char **busports);
-RS485emErrorCodes pidsChk_virtualPortsList  (virtualPortsList_t *list);
-virtualPort_t*    next_virtualPortsList     (virtualPortsList_t *list);
-void              resetIT_virtualPortsList  (virtualPortsList_t *list);
-void              free_virtualPortsList     (virtualPortsList_t *list);
-void              print_virtualPortsList    (virtualPortsList_t *list);
+void                init_virtualPortsList     (virtualPortsList_t *list);
+RS485emErrorCodes_t add_virtualPortsList      (virtualPortsList_t *list);
+RS485emErrorCodes_t update_virtualPortsList   (virtualPortsList_t *list, const char **busports);
+RS485emErrorCodes_t pidsChk_virtualPortsList  (virtualPortsList_t *list);
+virtualPort_t*      next_virtualPortsList     (virtualPortsList_t *list);
+void                resetIT_virtualPortsList  (virtualPortsList_t *list);
+void                free_virtualPortsList     (virtualPortsList_t *list);
+void                print_virtualPortsList    (virtualPortsList_t *list);
 
 
 #endif

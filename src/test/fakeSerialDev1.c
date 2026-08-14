@@ -86,7 +86,7 @@ int main(int argc, char *argv[]) {
 	int               c = 0;
 	char              file[PATH_MAX];
 	int               option_index = 0;
-	RS485emErrorCodes err = RS485EMULE_SUCCESS;
+	RS485emErrorCodes_t err = RS485EMULE_SUCCESS;
 
 	DBGTRACE
 	file[0] = '\0';

@@ -77,7 +77,7 @@ static int _getPortStatusCB (void *err, int count, char **data, char **columns) 
 	//	RS485EMULE_ERROR_INTERNAL
 	//	RS485EMULE_ERROR_FORBIDDENOP
 	//
-	RS485emErrorCodes _err = RS485EMULE_SUCCESS;
+	RS485emErrorCodes_t _err = RS485EMULE_SUCCESS;
 	pid_t             myPid = getpid();
 	
 	if (count != 1 || strcmp(columns[0], "pid") != 0) {
@@ -96,7 +96,7 @@ static int _getPortStatusCB (void *err, int count, char **data, char **columns) 
 		//printf("The %d-proc is requiring a port used by %d-proc\n",myPid, atoi(data[0]));
 	}
 	
-	*(RS485emErrorCodes*)err = _err;
+	*(RS485emErrorCodes_t*)err = _err;
 
 	return(0);
 }
@@ -125,7 +125,7 @@ int _sqlTransaction (sqlite3 *db, const char *op) {
 //------------------------------------------------------------------------------------------------------------------------------
 //                                        P U B L I C   F U N C T I O N S
 //------------------------------------------------------------------------------------------------------------------------------
-RS485emErrorCodes init_RS485emulatorAPI(void) {
+RS485emErrorCodes_t init_RS485emulatorAPI(void) {
 	//
 	// Description:
 	//	It initializes the module's static values. This function must be called before then any other one belongs to
@@ -137,7 +137,7 @@ RS485emErrorCodes init_RS485emulatorAPI(void) {
 	//	RS485EMULE_SUCCESS
 	//	RS485EMULE_ERROR_IOFAILED
 	//
-	RS485emErrorCodes err = RS485EMULE_SUCCESS;
+	RS485emErrorCodes_t err = RS485EMULE_SUCCESS;
 
 	#if TESTMODE > 0
 	sprintf(rs485_updateTool, "%s/src/%s", PRJHOME, RS485EMULE_UPDATECMD);
@@ -164,7 +164,7 @@ void close_RS485emulatorAPI(void) {
 }
 
 
-RS485emErrorCodes getMPort_RS485emulatorAPI (char *fpname) {
+RS485emErrorCodes_t getMPort_RS485emulatorAPI (char *fpname) {
 	//
 	// Description:
 	//	This function is used by the process with master role to get the the serial port name it has to use.
@@ -178,7 +178,7 @@ RS485emErrorCodes getMPort_RS485emulatorAPI (char *fpname) {
 	//	RS485EMULE_ERROR_ITEMNOTFOUND     No port available
 	//	RS485EMULE_ERROR_EXTTOOLFAILURE   rs485_updateTool returned an error
 	//
-	RS485emErrorCodes err = RS485EMULE_ERROR_ITEMNOTFOUND;
+	RS485emErrorCodes_t err = RS485EMULE_ERROR_ITEMNOTFOUND;
 	char              sqlStatement[PATH_MAX+64];
 	char              port[PATH_MAX];
 	int               rc;
@@ -241,7 +241,7 @@ RS485emErrorCodes getMPort_RS485emulatorAPI (char *fpname) {
 }
 
 
-RS485emErrorCodes release_RS485emulatorAPI (const char *serialport) {
+RS485emErrorCodes_t release_RS485emulatorAPI (const char *serialport) {
 	//
 	// Description:
 	//	It allows the client process to get an available virtual serial port
@@ -254,7 +254,7 @@ RS485emErrorCodes release_RS485emulatorAPI (const char *serialport) {
 	//	RS485EMULE_ERROR_FORBIDDENOP      The port is aòlready in use by another proc
 	//	RS485EMULE_WARNING_TIMEOUT
 	//
-	RS485emErrorCodes err = RS485EMULE_ERROR_ITEMNOTFOUND;
+	RS485emErrorCodes_t err = RS485EMULE_ERROR_ITEMNOTFOUND;
 	char              sqlStatement[256];
 	int               rc;
 	
@@ -315,7 +315,7 @@ RS485emErrorCodes release_RS485emulatorAPI (const char *serialport) {
 }
 
 
-RS485emErrorCodes takePort_RS485emulatorAPI (char *port) {
+RS485emErrorCodes_t takePort_RS485emulatorAPI (char *port) {
 	//
 	// Description:
 	//	It allows you to take the first available port
@@ -333,7 +333,7 @@ RS485emErrorCodes takePort_RS485emulatorAPI (char *port) {
 	//	RS485EMULE_WARNING_TIMEOUT       Reached timeout. But the function could be re-executed with success
 	//	RS485EMULE_ERROR_UNAVAILRES      The function failed, the resource was unexpectly unavailable
 	//
-	RS485emErrorCodes err = RS485EMULE_ERROR_ITEMNOTFOUND;
+	RS485emErrorCodes_t err = RS485EMULE_ERROR_ITEMNOTFOUND;
 	char              *sqlStatement = "SELECT devPort FROM portsDB WHERE pid=0 and role=\"S\";";
 	sqlite3_stmt      *stmt = NULL;
 	int               rc;

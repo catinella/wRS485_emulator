@@ -84,7 +84,7 @@ double getTimeStamp() {
 //                                                         M A I N 
 //------------------------------------------------------------------------------------------------------------------------------
 int main(int argc, char *argv[]) {
-	RS485emErrorCodes err = RS485EMULE_SUCCESS;
+	RS485emErrorCodes_t err = RS485EMULE_SUCCESS;
 	uint8_t           myID = 0;
 
 	if (argc > 1) {

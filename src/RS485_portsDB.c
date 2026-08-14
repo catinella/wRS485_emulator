@@ -63,7 +63,7 @@
 
 struct queryRetData {
 	char              **list;
-	RS485emErrorCodes err;
+	RS485emErrorCodes_t err;
 };
 
 static sqlite3 *portsDB = NULL;
@@ -125,7 +125,7 @@ static int _usedPorts_callback (void *psl, int count, char **data, char **column
 //                                             P U B L I C   F U N C T I O N S
 //------------------------------------------------------------------------------------------------------------------------------
 
-RS485emErrorCodes init_portsDB() {
+RS485emErrorCodes_t init_portsDB() {
 	//
 	// Description:
 	//	It initializes the SQLite DB, and sets internal data used by many functions
@@ -136,7 +136,7 @@ RS485emErrorCodes init_portsDB() {
 	//	RS485EMULE_ERROR_INTERNAL       Unknown error
 	//	RS485EMULE_ERROR_FORBIDDENOP    File permission changing forbidden (when I am running as root!!!!)
 	//
-	RS485emErrorCodes err = RS485EMULE_SUCCESS;
+	RS485emErrorCodes_t err = RS485EMULE_SUCCESS;
 	int               rc  = 0;
 
 	unlink(RS485_PORTSDBFILE);
@@ -187,7 +187,7 @@ void close_portsDB() {
 }
 
 
-RS485emErrorCodes push_portsDB(const char* busport, const char* devport, virtualPortRole_t role) {
+RS485emErrorCodes_t push_portsDB(const char* busport, const char* devport, virtualPortRole_t role) {
 	//
 	// Description:
 	//	It allows you to add a new virtual serial port to the in-process DB
@@ -197,7 +197,7 @@ RS485emErrorCodes push_portsDB(const char* busport, const char* devport, virtual
 	//	RS485EMULE_SUCCESS
 	//	RS485EMULE_ERROR_INTERNAL
 	//
-	RS485emErrorCodes err = RS485EMULE_SUCCESS;
+	RS485emErrorCodes_t err = RS485EMULE_SUCCESS;
 	char              sqlStatement[256];
 	char              roleChar = 'S';
 	
@@ -210,7 +210,7 @@ RS485emErrorCodes push_portsDB(const char* busport, const char* devport, virtual
 }
 
 
-RS485emErrorCodes usedPorts_portsDB (char **portsList) {
+RS485emErrorCodes_t usedPorts_portsDB (char **portsList) {
 	//
 	// Description:
 	//	It allows the emulator's process to retrive the list of all in-use ports
@@ -221,7 +221,7 @@ RS485emErrorCodes usedPorts_portsDB (char **portsList) {
 	//	RS485EMULE_SUCCESS
 	//	RS485EMULE_ERROR_INTERNAL
 	//
-	RS485emErrorCodes   err = RS485EMULE_SUCCESS;
+	RS485emErrorCodes_t   err = RS485EMULE_SUCCESS;
 	char                *sqlStatement = "SELECT busPort FROM portsDB WHERE pid>0 and role=\"S\";";
 	int                 rc;
 	struct queryRetData qrd;
@@ -252,7 +252,7 @@ void print_portsDB() {
 }
 
 
-RS485emErrorCodes pidChk_portsDB(const char *port) {
+RS485emErrorCodes_t pidChk_portsDB(const char *port) {
 	//
 	// Description:
 	//	It marks the argument defined port as an available one
@@ -262,7 +262,7 @@ RS485emErrorCodes pidChk_portsDB(const char *port) {
 	//	RS485EMULE_WARNING_NOTHINGTODO  The process is still running
 	//	RS485EMULE_ERROR_INTERNAL       SQL query returned error
 	//
-	RS485emErrorCodes err = RS485EMULE_SUCCESS;
+	RS485emErrorCodes_t err = RS485EMULE_SUCCESS;
 	char              sqlStatement[256];
 	pid_t             pid;
 	

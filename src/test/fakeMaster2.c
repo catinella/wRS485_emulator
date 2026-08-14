@@ -130,7 +130,7 @@ int getIndexByID (uint8_t *list, uint8_t id) {
 //                                                         M A I N 
 //------------------------------------------------------------------------------------------------------------------------------
 int main(int argc, char *argv[]) {
-	RS485emErrorCodes err       = RS485EMULE_SUCCESS;
+	RS485emErrorCodes_t err       = RS485EMULE_SUCCESS;
 	uint16_t          loopSleep = FMASTER_LOOPSLEEP;
 	int               sfd       = 0;
 	char              sport[PATH_MAX];

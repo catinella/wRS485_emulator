@@ -87,7 +87,7 @@ void summary (char *file) {
 //                                                         M A I N 
 //------------------------------------------------------------------------------------------------------------------------------
 int main(int argc, char *argv[]) {
-	RS485emErrorCodes err        = RS485EMULE_SUCCESS;
+	RS485emErrorCodes_t err        = RS485EMULE_SUCCESS;
 	uint8_t           myID       = 0;
 	uint16_t          regsaddr   = 0;
 	uint16_t          regsnum    = 0;
