@@ -23,6 +23,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <string.h>
+#include <unistd.h>
 #include <debugTools.h>
 #include <RS485_emulator.h>
 #include <RS485_portsDB.h>
@@ -49,6 +50,12 @@ struct qRetData {
 //------------------------------------------------------------------------------------------------------------------------------
 //                                         P R I V A T E   F U N C T I O N S
 //------------------------------------------------------------------------------------------------------------------------------
+
+void _init_portsList (char **pList, unsigned int noi) {
+	for (unsigned int t = 0; t < noi; t++) pList[t] = NULL;
+	return;
+}
+
 
 unsigned int _getSize_portsList (const char **list) {
 	//
@@ -290,10 +297,16 @@ TEST (RS485_portsDB_testingSuite, dbCreation) {
 TEST (RS485_portsDB_testingSuite, dbCheckForContent) {
 	//
 	// Description:
-	//	It writes data into the database, read it, and check for read data.
+	//	This test performs the following steps:
+	//	 1) It writes a foo-data set in the DB (as in the previous test)
+	//	 2) Using the SQL API, it loads the foo-data and checks for it size
+	//	 3) It marks some port as used, with a not-used PID
+	//	 4) It tests the usedPorts_portsDB() function
+	//	 5) It checks for the list size
 	//
 	RS485emErrorCodes err = RS485EMULE_SUCCESS;
 
+	// Module initialization
 	init_portsDB();
 
 	if ((err = _fillDB(TESTNUMPORTS, PREFIX)) != RS485EMULE_SUCCESS) {
@@ -303,8 +316,8 @@ TEST (RS485_portsDB_testingSuite, dbCheckForContent) {
 	} else {
 		char *pList[TESTNUMPORTS+2]; 
 		
-		// Initialization...
-		for (unsigned int t = 0; t < TESTNUMPORTS; t++) pList[t] = NULL;
+		// List initialization...
+		_init_portsList(pList, TESTNUMPORTS);
 		
 		if (_getFooPorts(pList)) {
 		
@@ -342,6 +355,8 @@ TEST (RS485_portsDB_testingSuite, dbCheckForContent) {
 		}
 	}
 	
+	close_portsDB();
+	
 	return;
 }
 
@@ -349,30 +364,64 @@ TEST (RS485_portsDB_testingSuite, dbCheckForContent) {
 TEST (RS485_portsDB_testingSuite, pidChk_portsDB) {
 	//
 	// Description:
-	//	It writes foo-data in the database, and associates every port (data) to not existent PIDs. So, when pidChk_portsDB()
-	//	function is called it will re-set those port as available ones (pid=0). The procedure will test this operation.
+	//	It performs the following steps:
+	//	 1) It writes a foo-data set in the DB (as in the previous test)
+	//	 2) It marks some port as used, with a not-used PID and marks two port with the current process ID
+	//	 3) It tests the usedPorts_portsDB() function
+	//	 4) It checks for the list size
 	//
-	/*
 	RS485emErrorCodes err = RS485EMULE_SUCCESS;
-	portsDBindexType t;
-	char             *portsList[TESTNUMPORTS];
 
 	init_portsDB();
-	err = _fillDB(TESTNUMPORTS, PREFIX);
-
-	if (err == RS485EMULE_SUCCESS) {
-
-
-
-		ASSERT_EQ (err, RS485EMULE_SUCCESS);
 	
+	if (_fillDB(TESTNUMPORTS, PREFIX) != RS485EMULE_SUCCESS) {
+		// ERROR!
+		printf("ERROR(%d)! Test skipped for internal errors\n", __LINE__);
+
+	} else if (
+		_setFooPortAsUsed(TESTUSEDPORTS, PIDLIMIT) == false ||
+		_setFooPortAsUsed(2, getpid()) == false
+	) {
+		// ERROR!
+		printf("ERROR! I cannot marks the required ports as used ones\n");
+
 	} else {
-		// WARNING!
-		printf("WARNING(%d)! Test skipped for internal errors\n", __LINE__);
+		char *pList[TESTNUMPORTS+2];
+		unsigned int t = 0;
+
+		_init_portsList(pList, TESTNUMPORTS+2);
+
+		// All ports
+		_getFooPorts(pList);
+
+		while (pList[t] != NULL) {
+			err = pidChk_portsDB(pList[t]);
+			
+			if (fileArgumentsDb_get("verbose", NULL)) {
+				if (err == RS485EMULE_SUCCESS)
+					printf("%s released\n", pList[t]);
+				else if (err == RS485EMULE_WARNING_NOTHINGTODO)
+					printf("%s still busy\n", pList[t]);
+				else
+					printf("ERROR! while I tried to release the %s port\n", pList[t]);
+			}
+			t++;
+		}
+	
+		err = usedPorts_portsDB(pList);
+		ASSERT_EQ (err, RS485EMULE_SUCCESS);
+		
+		if (fileArgumentsDb_get("verbose", NULL)) {
+			printf("List of used ports:\n");
+			_print_portsList(pList);
+			printf("\n");
+		}
+		ASSERT_EQ (2, _getSize_portsList((const char**)pList));
+	
+		_free_portsList(pList);
 	}
 
 	close_portsDB();
-	*/
 
 	return;
 }
