@@ -117,7 +117,7 @@ clean:
 cleanall:			clean
 				@echo "[CLEANALL]"
 				@rm -fv $(testsList) $(fakeDevsList) $(fakeMastersList)
-				#@make -C../ cleanall
+				@make -C../ cleanall
 
 
 $(PRJLIB_FILE):	
@@ -166,14 +166,14 @@ fakeMaster%.o:		fakeMaster%.c
 #                                               L I N K I N G   R U L E S
 #-------------------------------------------------------------------------------------------------------------------------------
 
-utest_%.c:			utest_RS485_%.o ../%.o
-				@echo "[LD C2] $@"
-				@LD_LIBRARY_PATH="../" $(CC) -Wall -L../ -o $@ $^ -lsqlite3 
+#utest_%.c:			utest_RS485_%.o ../%.o
+#				@echo "[LD C2] $@"
+#				@LD_LIBRARY_PATH="../" $(CC) -Wall -L../ -o $@ $^ -lsqlite3 
 
 
-test_RS485_virtualPort:	test_RS485_virtualPort.o
-				@echo "[LD C3] $@"
-				@LD_LIBRARY_PATH="../" $(CC) -Wall -L../ -o $@ $^ -lsqlite3 $(PRJLIB_L)
+utest_RS485_virtualPort:	utest_RS485_virtualPort.o RS485_virtualPort.o RS485_commonLib.o RS485_portsDB.o
+					@echo "[LD C3] $@"
+					@$(CC) -Wall -o $@ $^ -lm -lMinuteC -lsqlite3
 
 ifeq ($(NOMODBUS), 1)
 fakeSerialDev3:		
