@@ -259,14 +259,15 @@ RS485emErrorCodes_t pidChk_portsDB(const char *port) {
 	//	
 	// Returned value:
 	//	RS485EMULE_SUCCESS              The port has been released
-	//	RS485EMULE_WARNING_NOTHINGTODO  The process is still running
+	//	RS485EMULE_WARNING_UNAVAILRES   The process is still running
+	//	RS485EMULE_WARNING_NOTHINGTODO  The port was already available
 	//	RS485EMULE_ERROR_INTERNAL       SQL query returned error
 	//
 	RS485emErrorCodes_t err = RS485EMULE_SUCCESS;
 	char              sqlStatement[256];
 	pid_t             pid;
 	
-	sprintf(sqlStatement, "SELECT \"pid\" FROM portsDB WHERE busPort==\"%s\";", port);
+	sprintf(sqlStatement, "SELECT \"pid\" FROM portsDB WHERE busPort=\"%s\";", port);
 	if (sqlite3_exec(portsDB, sqlStatement, _pidByPort_callback, (void*)&pid, NULL) != SQLITE_OK) {
 		err = RS485EMULE_ERROR_INTERNAL;
 
@@ -274,14 +275,15 @@ RS485emErrorCodes_t pidChk_portsDB(const char *port) {
 		struct stat buff;
 		char        folder[PATH_MAX];
 		sprintf(folder, "/proc/%d", pid);
-		
+
 		if (stat(folder, &buff) < 0) {
+			// The port-owner process is no more running...
 			sprintf(sqlStatement, "UPDATE portsDB SET pid=0 WHERE busPort=\"%s\";", port);
 			if (sqlite3_exec(portsDB, sqlStatement, NULL, NULL, NULL) != SQLITE_OK)
 				err = RS485EMULE_ERROR_INTERNAL;
 		} else
 			// The process is still running
-			err = RS485EMULE_WARNING_NOTHINGTODO;
+			err = RS485EMULE_WARNING_UNAVAILRES;
 	} else
 		// No process to check for
 		err = RS485EMULE_WARNING_NOTHINGTODO;
