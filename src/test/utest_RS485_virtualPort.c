@@ -24,19 +24,26 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
-#include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <signal.h>
 #include <string.h>
+#include <sqlite3.h>
 #include <debugTools.h>
 #include <minute.h>
 #include <RS485_emulator.h>
 #include <RS485_portsDB.h>
 #include <RS485_virtualPort.h>
 
-static bool initFlag = false;
+struct qRetData {
+	char              **list;
+	unsigned int      itsNumber;
+	RS485emErrorCodes_t err;
+};
 
+//static bool initFlag = false;
+
+/*
 static void _sigHandler (int signum) {
 	printf("%d-signal received\n", signum);
 	return;
@@ -52,21 +59,44 @@ static void _init() {
 	}
 	return;
 }
-/*
-void _fakePidFile (pid_t fpid) {
-	//
-	// Description:
-	//	Because the RS485 emulaor is not running, we have to create a fake pid-file
-	//	If it is not possible then the test cannot go on
-	//
-	RS485emErrorCodes_t err = RS485EMULE_SUCCESS;
-	if ((err = RS485emu_writePidFile(getpid(), RS485EMULE_PIDFILE)) && err != RS485EMULE_SUCCESS) {
-		fprintf(stderr, "ERROR! I cannot create the \"%s\" file\n", RS485EMULE_PIDFILE);
-		exit(err);
-	}
-	return;
-}
 */
+
+static int _myCB (void *psl, int count, char **data, char **columns) {
+	//
+	// Description
+	//	This callback is called by sqlite3_exec() function for every item in the query.
+	//
+	//	[!] It allocates new memory areas in the heap, you will have to release them explicity
+	//
+	// Arguments:
+	//	psl     - Pointer to an array of names
+	//	count   - The number of columns in the result set
+	//	data    - The row's data
+	//	columns - The column names
+	//
+	static portsDBindexType idx = 0;
+
+	if (psl == NULL)
+		// Function initialization
+		idx = 0;
+
+	else {
+		struct qRetData *qrd = (struct qRetData*)psl;
+		
+		if (strcmp(columns[0], "busPort") != 0) {
+			// ERROR! (You should never get this error)
+			qrd->err = RS485EMULE_ERROR_INTERNAL;
+		} else {
+			qrd->list[idx] = strdup(data[0]);
+			qrd->itsNumber = idx;
+			//DBGTRACE
+		}
+		idx++;
+		qrd->list[idx] = NULL;
+		
+	}
+	return(0);
+}
 
 //------------------------------------------------------------------------------------------------------------------------------
 //                                      T E S T I N G   P R O C E D U R E S
@@ -75,18 +105,40 @@ TEST (RS485_virtualPort_testingSuite, newPortCreation) {
 	virtualPort_t      newport;
 	RS485emErrorCodes_t  err = RS485EMULE_SUCCESS;
 
-	_init();
 	init_virtualPort(&newport);
 
 	err = create_virtualPort(&newport, RS485EMULE_PORTSLAVE);
 	ASSERT_EQ (err, RS485EMULE_SUCCESS);
 
 	if (err == RS485EMULE_SUCCESS) {
+		sqlite3         *portsDB = NULL;
+		char            sqlStatement[1024];
+		struct qRetData qrd;
+		char            *sqliteErrMsg = NULL;
+		int             rc;
 
-		// TODO: getting the d-port
+		if ((rc = sqlite3_open(RS485_PORTSDBFILE, &portsDB)) != SQLITE_OK)
+			// ERROR!
+			printf ("ERROR(%d)! Test procedure intermnally failed\n", __LINE__);
 
-		// TODO: checking for the files
+		else {
+		 	sprintf("SELECT devPort FROM portsDB WHERE busport=\"%s\";", newport.port);
+			if ((rc = sqlite3_exec(portsDB, sqlStatement, _myCB, (void*)&qrd, &sqliteErrMsg)) != SQLITE_OK) 
+				// ERROR!
+				printf ("ERROR(%d)! Test procedure intermnally failed (retcode=%d): %s\n", __LINE__, rc, sqliteErrMsg);
+	
+			else if (qrd.err != RS485EMULE_SUCCESS)
+				// ERROR!
+				printf ("ERROR(%d)! Test procedure intermnally failed (retcode=%d)\n", __LINE__, qrd.err);
+			
+			else {
+				DBGTRACE
+				// TODO: getting the d-port
 
+				// TODO: checking for the files
+
+			}
+		}
 	}
 	
 	free_virtualPort(&newport);
