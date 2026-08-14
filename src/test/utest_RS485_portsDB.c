@@ -22,17 +22,15 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
-#include <signal.h>
 #include <string.h>
-#include <unistd.h>
-#include <sys/types.h>
-#include <sys/wait.h>
 #include <debugTools.h>
 #include <RS485_emulator.h>
 #include <RS485_portsDB.h>
 #include <sqlite3.h>
 #include <minute.h>
 #include <debugTools.h>
+#include <math.h>
+
 
 #define PREFIX        "/dev/Port-"
 #define TESTNUMPORTS  16
@@ -238,7 +236,7 @@ bool _setFooPortAsUsed (uint8_t noi, unsigned int pid) {
 	
 	if (out) {
 		unsigned int listSize = _getSize_portsList((const char**)myList);
-		unsigned int step = (listSize / noi);
+		unsigned int step = trunc(listSize / noi);
 		div_t        x;
 		int          rc;
 		char         *sqliteErrMsg = NULL;
@@ -248,10 +246,10 @@ bool _setFooPortAsUsed (uint8_t noi, unsigned int pid) {
 			printf ("ERROR(%d)! Test procedure intermnally failed\n", __LINE__);
 
 		else {
-			for (unsigned int t = 0; t < listSize; t++) {
+			for (unsigned int t = 0; t < (step * noi); t++) {
 				x = div(t, step);
 				if (x.rem == 0) {
-					sprintf(sqlStatement, "UPDATE portsDB SET pid=%d WHERE devPort=\"%s\";", pid, myList[t]);
+					sprintf(sqlStatement, "UPDATE portsDB SET pid=%d WHERE busPort=\"%s\";", pid, myList[t]);
 					if ((rc = sqlite3_exec(portsDB, sqlStatement, NULL, NULL, &sqliteErrMsg)) != SQLITE_OK) {
 						// ERROR!
 						printf (
@@ -310,6 +308,12 @@ TEST (RS485_portsDB_testingSuite, dbCheckForContent) {
 		
 		if (_getFooPorts(pList)) {
 		
+			if (fileArgumentsDb_get("verbose", NULL)) {
+				printf("List of registered ports:\n");
+				_print_portsList(pList);
+				printf("\n");
+			}
+
 			// It checks for the number of recorded items
 			ASSERT_EQ (TESTNUMPORTS, _getSize_portsList((const char**)pList));
 			
@@ -322,10 +326,15 @@ TEST (RS485_portsDB_testingSuite, dbCheckForContent) {
 				printf("ERROR! I cannot marks the required ports as used ones\n");
 
 			} else {
+
 				// Checking for used ports
 				err = usedPorts_portsDB(pList);
 				ASSERT_EQ (err, RS485EMULE_SUCCESS);
-				_print_portsList(pList);
+				if (fileArgumentsDb_get("verbose", NULL)) {
+					printf("List of used ports:\n");
+					_print_portsList(pList);
+					printf("\n");
+				}
 				ASSERT_EQ (TESTUSEDPORTS, _getSize_portsList((const char**)pList));
 			}
 			
