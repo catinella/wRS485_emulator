@@ -68,6 +68,7 @@ typedef enum {
 	RS485EMULE_WARNING_ITEMNOTFOUND = 35,
 	RS485EMULE_WARNING_NOTHINGTODO  = 37,
 	RS485EMULE_WARNING_TIMEOUT      = 39,
+	RS485EMULE_WARNING_UNAVAILRES   = 41,
 	RS485EMULE_WARNING_LAST         = 64,
 	//-------------------------------------------
 	//       B U S   E R R O R   C O D E S
