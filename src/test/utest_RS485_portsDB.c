@@ -31,6 +31,7 @@
 #include <minute.h>
 #include <debugTools.h>
 #include <math.h>
+#include <libForTests.h>
 
 
 #define PREFIX        "/dev/Port-"
@@ -45,52 +46,11 @@ struct qRetData {
 	RS485emErrorCodes_t err;
 };
 
-#define PIDLIMIT 7200
+#define PIDLIMIT 72000
 
 //------------------------------------------------------------------------------------------------------------------------------
 //                                         P R I V A T E   F U N C T I O N S
 //------------------------------------------------------------------------------------------------------------------------------
-
-void _init_portsList (char **pList, unsigned int noi) {
-	for (unsigned int t = 0; t < noi; t++) pList[t] = NULL;
-	return;
-}
-
-
-unsigned int _getSize_portsList (const char **list) {
-	//
-	// Description:
-	//	It returns the size of argument defined ports list 
-	//
-	unsigned int t = 0;
-	while (list[t] != NULL) t++;
-	return(t);
-}
-
-
-void _free_portsList (char **list) {
-	//
-	// Description:
-	//	It releases the memory resources used by the chars-string items
-	//
-	unsigned int t = 0;
-	while (list[t] != NULL) {
-		free(list[t]);
-		list[t] = NULL;
-		t++;
-	}
-	return;
-}
-
-
-void _print_portsList (char **list) {
-	unsigned int t = 0;
-	while (list[t] != NULL) {
-		printf("%s\n", list[t]);
-		t++;
-	}
-	return;
-}
 
 
 /*
@@ -212,8 +172,8 @@ bool _getFooPorts (char **portsList) {
 
 	else {
 		if ((rc = sqlite3_exec(portsDB, sqlStatement, _myCB, (void*)&qrd, &sqliteErrMsg)) != SQLITE_OK) 
-		// ERROR!
-		printf ("ERROR(%d)! Test procedure intermnally failed (retcode=%d): %s\n", __LINE__, rc, sqliteErrMsg);
+			// ERROR!
+			printf ("ERROR(%d)! Test procedure intermnally failed (retcode=%d): %s\n", __LINE__, rc, sqliteErrMsg);
 	
 		else if (qrd.err != RS485EMULE_SUCCESS)
 			// ERROR!
@@ -242,7 +202,7 @@ bool _setFooPortAsUsed (uint8_t noi, unsigned int pid) {
 	out = _getFooPorts(myList);
 	
 	if (out) {
-		unsigned int listSize = _getSize_portsList((const char**)myList);
+		unsigned int listSize = getSize_stringList((const char**)myList);
 		unsigned int step = trunc(listSize / noi);
 		div_t        x;
 		int          rc;
@@ -317,21 +277,21 @@ TEST (RS485_portsDB_testingSuite, dbCheckForContent) {
 		char *pList[TESTNUMPORTS+2]; 
 		
 		// List initialization...
-		_init_portsList(pList, TESTNUMPORTS);
+		init_stringList(pList, TESTNUMPORTS);
 		
 		if (_getFooPorts(pList)) {
 		
 			if (fileArgumentsDb_get("verbose", NULL)) {
 				printf("List of registered ports:\n");
-				_print_portsList(pList);
+				print_stringList((const char**)pList);
 				printf("\n");
 			}
 
 			// It checks for the number of recorded items
-			ASSERT_EQ (TESTNUMPORTS, _getSize_portsList((const char**)pList));
+			ASSERT_EQ (TESTNUMPORTS, getSize_stringList((const char**)pList));
 			
 			// List cleaning...
-			_free_portsList(pList);
+			free_stringList(pList);
 
 			// Marking some port as used one
 			if (_setFooPortAsUsed(TESTUSEDPORTS, PIDLIMIT) == false) {
@@ -345,13 +305,13 @@ TEST (RS485_portsDB_testingSuite, dbCheckForContent) {
 				ASSERT_EQ (err, RS485EMULE_SUCCESS);
 				if (fileArgumentsDb_get("verbose", NULL)) {
 					printf("List of used ports:\n");
-					_print_portsList(pList);
+					print_stringList((const char**)pList);
 					printf("\n");
 				}
-				ASSERT_EQ (TESTUSEDPORTS, _getSize_portsList((const char**)pList));
+				ASSERT_EQ (TESTUSEDPORTS, getSize_stringList((const char**)pList));
 			}
 			
-			_free_portsList(pList);
+			free_stringList(pList);
 		}
 	}
 	
@@ -389,7 +349,7 @@ TEST (RS485_portsDB_testingSuite, pidChk_portsDB) {
 		char *pList[TESTNUMPORTS+2];
 		unsigned int t = 0;
 
-		_init_portsList(pList, TESTNUMPORTS+2);
+		init_stringList(pList, TESTNUMPORTS+2);
 
 		// All ports
 		_getFooPorts(pList);
@@ -400,10 +360,12 @@ TEST (RS485_portsDB_testingSuite, pidChk_portsDB) {
 			if (fileArgumentsDb_get("verbose", NULL)) {
 				if (err == RS485EMULE_SUCCESS)
 					printf("%s released\n", pList[t]);
-				else if (err == RS485EMULE_WARNING_NOTHINGTODO)
-					printf("%s still busy\n", pList[t]);
+
+				else if (err == RS485EMULE_WARNING_UNAVAILRES)
+					printf("%s still in-use\n", pList[t]);
+
 				else
-					printf("ERROR! while I tried to release the %s port\n", pList[t]);
+					printf("%s is not in-use\n", pList[t]);
 			}
 			t++;
 		}
@@ -413,12 +375,12 @@ TEST (RS485_portsDB_testingSuite, pidChk_portsDB) {
 		
 		if (fileArgumentsDb_get("verbose", NULL)) {
 			printf("List of used ports:\n");
-			_print_portsList(pList);
+			print_stringList((const char**)pList);
 			printf("\n");
 		}
-		ASSERT_EQ (2, _getSize_portsList((const char**)pList));
+		ASSERT_EQ (2, getSize_stringList((const char**)pList));
 	
-		_free_portsList(pList);
+		free_stringList(pList);
 	}
 
 	close_portsDB();

@@ -25,6 +25,7 @@
 #include <string.h>
 #include <math.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include <stdbool.h>
 #include <unistd.h>
 #include <time.h>
@@ -103,3 +104,44 @@ unsigned int randomInt (unsigned int scale) {
 	return((unsigned int)roundf(((float)rand()/RAND_MAX)*scale));
 }
 
+
+void init_stringList (char **pList, unsigned int noi) {
+	for (unsigned int t = 0; t < noi; t++) pList[t] = NULL;
+	return;
+}
+
+
+unsigned int getSize_stringList (const char **list) {
+	//
+	// Description:
+	//	It returns the size of argument defined ports list 
+	//
+	unsigned int t = 0;
+	while (list[t] != NULL) t++;
+	return(t);
+}
+
+
+void free_stringList (char **list) {
+	//
+	// Description:
+	//	It releases the memory resources used by the chars-string items
+	//
+	unsigned int t = 0;
+	while (list[t] != NULL) {
+		free(list[t]);
+		list[t] = NULL;
+		t++;
+	}
+	return;
+}
+
+
+void print_stringList (const char **list) {
+	unsigned int t = 0;
+	while (list[t] != NULL) {
+		printf("%s\n", list[t]);
+		t++;
+	}
+	return;
+}

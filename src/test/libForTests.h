@@ -32,4 +32,10 @@ void         stringInversion (char *sentence);
 void         randomString    (char *data, uint8_t *size);
 unsigned int randomInt       (unsigned int scale);
 	
+void         init_stringList    (char **pList, unsigned int noi);
+unsigned int getSize_stringList (const char **list);
+void         free_stringList    (char **list);
+void         print_stringList   (const char **list);
+
+
 #endif
