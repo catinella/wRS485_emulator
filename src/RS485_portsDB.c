@@ -99,13 +99,7 @@ static int _usedPorts_callback (void *psl, int count, char **data, char **column
 	//	data    - The row's data
 	//	columns - The column names
 	//
-	static portsDBindexType numups = 0;
-
-	if (psl == NULL)
-		// Function initialization
-		numups = 0;
-
-	else {
+	if (psl == NULL) {
 		struct queryRetData *qrd = (struct queryRetData*)psl;
 		
 		if (count != 1 || strcmp(columns[0], "busPort") != 0) {
@@ -115,9 +109,6 @@ static int _usedPorts_callback (void *psl, int count, char **data, char **column
 			g_ptr_array_add (qrd->list, (gpointer)strdup(data[0]));
 			//BGTRACE
 		}
-		numups++;
-		qrd->list[numups] = NULL;
-		
 	}
 	return(0);
 }
@@ -230,7 +221,6 @@ RS485emErrorCodes_t usedPorts_portsDB (GPtrArray *portsList) {
 	_usedPorts_callback(NULL, 0, NULL, NULL);
 	qrd.list = portsList;
 	qrd.err  = RS485EMULE_SUCCESS;
-	portsList[0] = '\0';
 	
 	rc = sqlite3_exec(portsDB, sqlStatement, _usedPorts_callback, (void*)&qrd, NULL);
 	if (rc != SQLITE_OK)
