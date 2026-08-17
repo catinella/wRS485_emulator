@@ -36,5 +36,6 @@ unsigned int randomInt          (unsigned int scale);
 void         print_stringList   (const GPtrArray *list);
 unsigned int split_stringList   (GPtrArray *list, const char *src, const char *splitter);
 
+void         chomp              (char *string_a);
 
 #endif

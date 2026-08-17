@@ -158,3 +158,11 @@ unsigned int split_stringList (GPtrArray *list, const char *src, const char *spl
 	}
 	return(list->len);
 }
+
+void chomp (char *string_a) {
+	unsigned int x = (strlen(string_a) - 1); 
+	while (x > 0 && (string_a[x] == '\n' || string_a[x] == '\r')) {
+		string_a[x] = '\0';
+		x--;
+	}   
+}
