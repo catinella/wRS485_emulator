@@ -30,6 +30,7 @@
 
 #define RS485PORTSDB
 
+#include <glib.h>
 #include <RS485_emulator.h>
 #include <RS485_virtualPort.h>
 
@@ -48,7 +49,7 @@ typedef uint8_t portsDBindexType;
 RS485emErrorCodes_t init_portsDB      ();
 void                close_portsDB     ();
 RS485emErrorCodes_t push_portsDB      (const char *busport, const char *devport, virtualPortRole_t role);
-RS485emErrorCodes_t usedPorts_portsDB (char **portsList);
+RS485emErrorCodes_t usedPorts_portsDB (GPtrArray *portsList);
 void                print_portsDB     ();
 RS485emErrorCodes_t pidChk_portsDB    (const char *port);
 

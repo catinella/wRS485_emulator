@@ -62,7 +62,7 @@
 
 
 struct queryRetData {
-	char              **list;
+	GPtrArray           *list;
 	RS485emErrorCodes_t err;
 };
 
@@ -112,7 +112,7 @@ static int _usedPorts_callback (void *psl, int count, char **data, char **column
 			// ERROR! (You should never get this error)
 			qrd->err = RS485EMULE_ERROR_INTERNAL;
 		} else {
-			qrd->list[numups] = strdup(data[0]);
+			g_ptr_array_add (qrd->list, (gpointer)strdup(data[0]));
 			//BGTRACE
 		}
 		numups++;
@@ -210,7 +210,7 @@ RS485emErrorCodes_t push_portsDB(const char* busport, const char* devport, virtu
 }
 
 
-RS485emErrorCodes_t usedPorts_portsDB (char **portsList) {
+RS485emErrorCodes_t usedPorts_portsDB (GPtrArray *portsList) {
 	//
 	// Description:
 	//	It allows the emulator's process to retrive the list of all in-use ports
