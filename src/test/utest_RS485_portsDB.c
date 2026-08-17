@@ -72,7 +72,7 @@ bool _search_portsList(const char *port, const char **list) {
 */
 
 
-RS485emErrorCodes_t _fillDB(portsDBindexType noi, const char *prefix) {
+RS485emErrorCodes_t _fillDB(unsigned int noi, const char *prefix) {
 	//
 	// Description:
 	//	It fills the DB with foo values composed bt the argument defined prefix and a numerical suffix
@@ -84,12 +84,11 @@ RS485emErrorCodes_t _fillDB(portsDBindexType noi, const char *prefix) {
 	// Returned code:
 	//	Please, read the push_portsDB() documentation
 	//
-	portsDBindexType  t = 0;
 	char              bport[PATH_MAX];
 	char              dport[PATH_MAX];
 	RS485emErrorCodes_t err = RS485EMULE_SUCCESS;
 	
-	for (t=0; t<noi; t++) {
+	for (unsigned int t=0; t<noi; t++) {
 		sprintf(bport, "%s%d", prefix, (t*4));
 		sprintf(dport, "%s%d", prefix, (t*4+1));
 		err = push_portsDB(bport, dport, RS485EMULE_PORTSLAVE);
@@ -226,6 +225,8 @@ bool _setFooPortAsUsed (uint8_t noi, unsigned int pid) {
 			sqlite3_close(portsDB);
 		}
 	}
+	
+	g_ptr_array_free(myList, TRUE);
 
 	return(out);
 }
@@ -282,7 +283,7 @@ TEST (RS485_portsDB_testingSuite, dbCheckForContent) {
 			ASSERT_EQ (TESTNUMPORTS, pList->len);
 			
 			// List cleaning...
-			g_ptr_array_free(pList, TRUE);
+			g_ptr_array_set_size(pList, 0);
 
 			// Marking some port as used one
 			if (_setFooPortAsUsed(TESTUSEDPORTS, PIDLIMIT) == false) {
@@ -337,7 +338,7 @@ TEST (RS485_portsDB_testingSuite, pidChk_portsDB) {
 		printf("ERROR! I cannot marks the required ports as used ones\n");
 
 	} else {
-		GPtrArray *pList = NULL;
+		GPtrArray *pList = g_ptr_array_new_with_free_func(g_free);
 
 		// All ports
 		_getFooPorts(pList);
@@ -360,6 +361,9 @@ TEST (RS485_portsDB_testingSuite, pidChk_portsDB) {
 			t++;
 		}
 	
+		// List cleaning...
+		g_ptr_array_set_size(pList, 0);
+
 		err = usedPorts_portsDB(pList);
 		ASSERT_EQ (err, RS485EMULE_SUCCESS);
 		
@@ -368,7 +372,7 @@ TEST (RS485_portsDB_testingSuite, pidChk_portsDB) {
 			print_stringList((const GPtrArray*)pList);
 			printf("\n");
 		}
-		ASSERT_EQ (2, pList->len);
+		ASSERT_EQ (3, pList->len);
 	
 		g_ptr_array_free(pList, TRUE);
 	}
