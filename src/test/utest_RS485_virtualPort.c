@@ -21,6 +21,7 @@
 -------------------------------------------------------------------------------------------------------------------------------*/
 #include <stdio.h>
 #include <unistd.h>
+#include <sys/stat.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
@@ -33,9 +34,10 @@
 #include <RS485_portsDB.h>
 #include <RS485_virtualPort.h>
 
+#define TEST_MESSAGE "BLA BLA BLA.... 138746824628428347284628 BLA BLA BLA...."
+
 struct qRetData {
 	GPtrArray         *list;
-	unsigned int      itsNumber;
 	RS485emErrorCodes_t err;
 };
 
@@ -55,7 +57,7 @@ static int _myCB (void *psl, int count, char **data, char **columns) {
 	if (psl != NULL) {
 		struct qRetData *qrd = (struct qRetData*)psl;
 		
-		if (strcmp(columns[0], "busPort") != 0) {
+		if (strcmp(columns[0], "devPort") != 0) {
 			// ERROR! (You should never get this error)
 			qrd->err = RS485EMULE_ERROR_INTERNAL;
 		} else {
@@ -143,7 +145,7 @@ TEST (RS485_virtualPort_testingSuite, newPortCreation) {
 
 						if (fileArgumentsDb_get("verbose", NULL)) 
 							printf("Child process: \"%s\"\n", file);
-							
+
 						// Checking for the child process' executable file
 						ASSERT_EQ (0, strcmp(file, "socat"));
 					}
@@ -166,20 +168,30 @@ TEST (RS485_virtualPort_testingSuite, newPortCreation) {
 
 
 TEST (RS485_virtualPort_testingSuite, dataExchange) {
-	/*
-	if (err == RS485EMULE_SUCCESS) {
-		sqlite3         *portsDB = NULL;
-		char            sqlStatement[1024];
-		struct qRetData qrd;
-		char            *sqliteErrMsg = NULL;
-		int             rc;
+	virtualPort_t        newport;
+	RS485emErrorCodes_t  err = RS485EMULE_SUCCESS;
+
+	init_virtualPort(&newport);
+	
+	if ((err = create_virtualPort(&newport, RS485EMULE_PORTSLAVE)) == RS485EMULE_SUCCESS) {
+		sqlite3 *portsDB = NULL;
+		char    *sqliteErrMsg = NULL;
+		int     rc;
 
 		if ((rc = sqlite3_open(RS485_PORTSDBFILE, &portsDB)) != SQLITE_OK)
 			// ERROR!
 			printf ("ERROR(%d)! Test procedure intermnally failed\n", __LINE__);
 
 		else {
-		 	sprintf("SELECT devPort FROM portsDB WHERE busport=\"%s\";", newport.port);
+			struct qRetData qrd;
+			char   sqlStatement[8192];
+			qrd.err =  RS485EMULE_SUCCESS;
+			qrd.list = g_ptr_array_new_with_free_func(g_free);
+
+			//
+			// Getting the dev-port
+			//
+		 	sprintf(sqlStatement, "SELECT devPort FROM portsDB WHERE busport=\"%s\";", (char*)newport.port);
 			if ((rc = sqlite3_exec(portsDB, sqlStatement, _myCB, (void*)&qrd, &sqliteErrMsg)) != SQLITE_OK) 
 				// ERROR!
 				printf ("ERROR(%d)! Test procedure intermnally failed (retcode=%d): %s\n", __LINE__, rc, sqliteErrMsg);
@@ -188,17 +200,94 @@ TEST (RS485_virtualPort_testingSuite, dataExchange) {
 				// ERROR!
 				printf ("ERROR(%d)! Test procedure intermnally failed (retcode=%d)\n", __LINE__, qrd.err);
 			
+			else if (qrd.list->len != 1)
+				// ERROR! (The SQLite DB should have just only one record)
+				printf ("ERROR(%d)! Corrupted data\n", __LINE__);
+			
 			else {
-				DBGTRACE
-				// TODO: getting the d-port
+				struct stat statbuf;
+				char *bport = newport.port;	
+				char *dport = (char*)g_ptr_array_index(qrd.list, 0);
 
-				// TODO: checking for the files
+				if (fileArgumentsDb_get("verbose", NULL)) {
+					printf("BUS-port: %s\n", bport);
+					printf("DEV-port: %s\n", dport);
+				}
 
+				if (stat(bport, &statbuf) < 0)
+					// ERROR!
+					printf ("ERROR(%d)! I cannot find the port-file \"%s\" (errno=%d)\n", __LINE__, bport, errno);
+				
+				else if (stat(dport, &statbuf) < 0
+				) {
+					// ERROR!
+					printf ("ERROR(%d)! I cannot find the port-file \"%s\" (errno=%d)\n", __LINE__, dport, errno);
+
+				} else {
+					FILE     *fh = NULL; 
+					uint16_t messageSize = sizeof(char) * (strlen(TEST_MESSAGE) + 1);
+					int      pid = fork();
+					
+					if (pid < 0)
+						// ERROR!
+						printf ("ERROR(%d)! I cannot create a child-process (errno=%d)\n", __LINE__, errno);
+					
+					else if (pid == 0) {
+						int  err = 0;
+						sleep(1);
+						if ((fh = fopen(dport, "w")) == NULL)
+							// ERROR
+							err = 127;
+						
+						else if (fwrite(TEST_MESSAGE, messageSize, 1, fh) != 1)
+							// ERROR
+							err = 125;
+						
+
+						if (fh != NULL) fclose(fh);
+						exit(err);
+					
+					} else {
+						char reply[1024];
+					
+						if ((fh = fopen(bport, "r")) == NULL) {
+							// ERROR!
+							printf(
+								"ERROR(%d)! I cannot open the port-file \"%s\" (errno=%d)\n",
+								__LINE__, bport, errno
+							);
+
+						} else if (fread(reply, messageSize, 1, fh) != 1)
+							// ERROR
+							printf(
+								"ERROR(%d)! I cannot read data from the port-file \"%s\" (errno=%d)\n",
+								__LINE__, bport, errno
+							);
+
+						else {
+							//
+							// It checks for the exchanged message content.
+							// Because socat process link the two virtual serial port, the messages should be the same
+							//
+							ASSERT_EQ (0, strcmp(TEST_MESSAGE, reply));
+						}
+					}
+					
+
+				}
 			}
+			
+			sqlite3_close(portsDB);
+			
+			g_ptr_array_free(qrd.list, TRUE);
 		}
 	}
 	
-	*/
+	free_virtualPort(&newport);
+
+	// Ports-database closing
+	close_portsDB();
+	
 	return;
 }
 
