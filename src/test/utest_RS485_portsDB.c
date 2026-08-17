@@ -41,7 +41,7 @@
 bool signalFlag = false;
 
 struct qRetData {
-	char              **list;
+	GPtrArray         *list;
 	unsigned int      itsNumber;
 	RS485emErrorCodes_t err;
 };
@@ -119,32 +119,23 @@ static int _myCB (void *psl, int count, char **data, char **columns) {
 	//	data    - The row's data
 	//	columns - The column names
 	//
-	static portsDBindexType idx = 0;
-
-	if (psl == NULL)
-		// Function initialization
-		idx = 0;
-
-	else {
+	if (psl != NULL) {
 		struct qRetData *qrd = (struct qRetData*)psl;
 		
 		if (strcmp(columns[0], "busPort") != 0) {
 			// ERROR! (You should never get this error)
 			qrd->err = RS485EMULE_ERROR_INTERNAL;
 		} else {
-			qrd->list[idx] = strdup(data[0]);
-			qrd->itsNumber = idx;
+			g_ptr_array_add(qrd->list, (gpointer)strdup(*data));
 			//DBGTRACE
 		}
-		idx++;
-		qrd->list[idx] = NULL;
 		
 	}
 	return(0);
 }
 
 
-bool _getFooPorts (char **portsList) {
+bool _getFooPorts (GPtrArray *portsList) {
 	//
 	// Description:
 	//	It writes all busPort names in the argument defined char-strings list
@@ -161,7 +152,6 @@ bool _getFooPorts (char **portsList) {
 	bool            out = false;
 
 	// Initialization
-	_myCB(NULL, 0, NULL, NULL);
 	qrd.list      = portsList;
 	qrd.err       = RS485EMULE_SUCCESS;
 	qrd.itsNumber = 0;
@@ -193,17 +183,16 @@ bool _getFooPorts (char **portsList) {
 bool _setFooPortAsUsed (uint8_t noi, unsigned int pid) {
 	sqlite3         *portsDB = NULL;
 	char            sqlStatement[1024];
-	char            *myList[TESTNUMPORTS+2];
+	GPtrArray       *myList = NULL;;
 	bool            out = true;
 
 	// Initialization
-	for (unsigned int t = 0; t < TESTNUMPORTS+2; t++) myList[t] = NULL;
+	myList = g_ptr_array_new_with_free_func(g_free);
 
 	out = _getFooPorts(myList);
 	
 	if (out) {
-		unsigned int listSize = getSize_stringList((const char**)myList);
-		unsigned int step = trunc(listSize / noi);
+		unsigned int step = trunc(myList->len / noi);
 		div_t        x;
 		int          rc;
 		char         *sqliteErrMsg = NULL;
@@ -216,7 +205,12 @@ bool _setFooPortAsUsed (uint8_t noi, unsigned int pid) {
 			for (unsigned int t = 0; t < (step * noi); t++) {
 				x = div(t, step);
 				if (x.rem == 0) {
-					sprintf(sqlStatement, "UPDATE portsDB SET pid=%d WHERE busPort=\"%s\";", pid, myList[t]);
+					sprintf(
+						sqlStatement, 
+						"UPDATE portsDB SET pid=%d WHERE busPort=\"%s\";", 
+						pid, 
+						(char*)g_ptr_array_index(myList, t)
+					);
 					if ((rc = sqlite3_exec(portsDB, sqlStatement, NULL, NULL, &sqliteErrMsg)) != SQLITE_OK) {
 						// ERROR!
 						printf (
@@ -274,24 +268,21 @@ TEST (RS485_portsDB_testingSuite, dbCheckForContent) {
 		printf ("ERROR(%d)! push_portsDB() call failed (retcode=%d)\n", __LINE__, err);
 	
 	} else {
-		char *pList[TESTNUMPORTS+2]; 
-		
-		// List initialization...
-		init_stringList(pList, TESTNUMPORTS);
-		
+		GPtrArray *pList = g_ptr_array_new_with_free_func(g_free);
+
 		if (_getFooPorts(pList)) {
 		
 			if (fileArgumentsDb_get("verbose", NULL)) {
 				printf("List of registered ports:\n");
-				print_stringList((const char**)pList);
+				print_stringList((const GPtrArray*)pList);
 				printf("\n");
 			}
 
 			// It checks for the number of recorded items
-			ASSERT_EQ (TESTNUMPORTS, getSize_stringList((const char**)pList));
+			ASSERT_EQ (TESTNUMPORTS, pList->len);
 			
 			// List cleaning...
-			free_stringList(pList);
+			g_ptr_array_free(pList, TRUE);
 
 			// Marking some port as used one
 			if (_setFooPortAsUsed(TESTUSEDPORTS, PIDLIMIT) == false) {
@@ -303,16 +294,16 @@ TEST (RS485_portsDB_testingSuite, dbCheckForContent) {
 				// Checking for used ports
 				err = usedPorts_portsDB(pList);
 				ASSERT_EQ (err, RS485EMULE_SUCCESS);
+			
 				if (fileArgumentsDb_get("verbose", NULL)) {
 					printf("List of used ports:\n");
-					print_stringList((const char**)pList);
+					print_stringList((const GPtrArray *)pList);
 					printf("\n");
 				}
-				ASSERT_EQ (TESTUSEDPORTS, getSize_stringList((const char**)pList));
+				ASSERT_EQ (TESTUSEDPORTS, pList->len);
 			}
-			
-			free_stringList(pList);
 		}
+		g_ptr_array_free(pList, TRUE);
 	}
 	
 	close_portsDB();
@@ -346,26 +337,25 @@ TEST (RS485_portsDB_testingSuite, pidChk_portsDB) {
 		printf("ERROR! I cannot marks the required ports as used ones\n");
 
 	} else {
-		char *pList[TESTNUMPORTS+2];
-		unsigned int t = 0;
-
-		init_stringList(pList, TESTNUMPORTS+2);
+		GPtrArray *pList = NULL;
 
 		// All ports
 		_getFooPorts(pList);
 
-		while (pList[t] != NULL) {
-			err = pidChk_portsDB(pList[t]);
+		for (unsigned int t = 0; t < pList->len; t++) {
+			const char *port = g_ptr_array_index(pList, t);
+
+			err = pidChk_portsDB(port);
 			
 			if (fileArgumentsDb_get("verbose", NULL)) {
 				if (err == RS485EMULE_SUCCESS)
-					printf("%s released\n", pList[t]);
+					printf("%s released\n", port);
 
 				else if (err == RS485EMULE_WARNING_UNAVAILRES)
-					printf("%s still in-use\n", pList[t]);
+					printf("%s still in-use\n", port);
 
 				else
-					printf("%s is not in-use\n", pList[t]);
+					printf("%s is not in-use\n", port);
 			}
 			t++;
 		}
@@ -375,12 +365,12 @@ TEST (RS485_portsDB_testingSuite, pidChk_portsDB) {
 		
 		if (fileArgumentsDb_get("verbose", NULL)) {
 			printf("List of used ports:\n");
-			print_stringList((const char**)pList);
+			print_stringList((const GPtrArray*)pList);
 			printf("\n");
 		}
-		ASSERT_EQ (2, getSize_stringList((const char**)pList));
+		ASSERT_EQ (2, pList->len);
 	
-		free_stringList(pList);
+		g_ptr_array_free(pList, TRUE);
 	}
 
 	close_portsDB();
