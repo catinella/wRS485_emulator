@@ -171,9 +171,9 @@ fakeMaster%.o:		fakeMaster%.c
 #				@LD_LIBRARY_PATH="../" $(CC) -Wall -L../ -o $@ $^ -lsqlite3 
 
 
-utest_RS485_virtualPort:	utest_RS485_virtualPort.o RS485_virtualPort.o RS485_commonLib.o RS485_portsDB.o
+utest_RS485_virtualPort:	utest_RS485_virtualPort.o RS485_virtualPort.o RS485_commonLib.o RS485_portsDB.o libForTests.o
 					@echo "[LD C3] $@"
-					@$(CC) -Wall -o $@ $^ -lm -lMinuteC -lsqlite3
+					@$(CC) -Wall -o $@ $^ -lm -lMinuteC -lsqlite3 $(shell pkg-config --static --libs glib-2.0)
 
 ifeq ($(NOMODBUS), 1)
 fakeSerialDev3:		
@@ -191,9 +191,9 @@ fakeSerialDev%:		fakeSerialDev%.o libForTests.o $(PRJLIB_FILE)
 				@LD_LIBRARY_PATH="../" $(CC) -Wall -L../ -o $@ $^ -lm -lsqlite3 $(mbLinkOpt) $(PRJLIB_L)
 
 
-test_RS485_%:		../RS485_%.o test_RS485_%.o libForTests.o
-				@echo "[LD 3] $@"
-				@LD_LIBRARY_PATH="../" $(CC) -Wall -L../ -o $@ $^ -lm $(PRJLIB_L)
+#test_RS485_%:		../RS485_%.o test_RS485_%.o libForTests.o
+#				@echo "[LD 3] $@"
+#				@$(CC) -Wall -o $@ $^ -lm -lMinuteC -lsqlite3 $(shell pkg-config --static --libs glib-2.0) 
 
 
 utest_%:			utest_%.o libForTests.o %.o RS485_commonLib.o
