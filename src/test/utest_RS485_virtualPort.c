@@ -249,31 +249,15 @@ TEST (RS485_virtualPort_testingSuite, dataExchange) {
 					
 					} else {
 						char reply[1024];
-					
-						if ((fh = fopen(bport, "r")) == NULL) {
-							// ERROR!
-							printf(
-								"ERROR(%d)! I cannot open the port-file \"%s\" (errno=%d)\n",
-								__LINE__, bport, errno
-							);
+						
+						err = open_virtualPort(&newport);
+						ASSERT_EQ (err, RS485EMULE_SUCCESS);
+						
+						err = recv_virtualPort(newport, reply, messageSize);
+						ASSERT_EQ (err, RS485EMULE_SUCCESS);
 
-						} else if (fread(reply, messageSize, 1, fh) != 1)
-							// ERROR
-							printf(
-								"ERROR(%d)! I cannot read data from the port-file \"%s\" (errno=%d)\n",
-								__LINE__, bport, errno
-							);
-
-						else {
-							//
-							// It checks for the exchanged message content.
-							// Because socat process link the two virtual serial port, the messages should be the same
-							//
-							ASSERT_EQ (0, strcmp(TEST_MESSAGE, reply));
-						}
+						ASSERT_EQ (0, strcmp(TEST_MESSAGE, reply));
 					}
-					
-
 				}
 			}
 			
