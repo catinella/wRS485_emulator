@@ -41,7 +41,7 @@ ifeq ($(ARCH), arm)
 	CPP      = $(BHOST)/bin/arm-none-linux-gnueabihf-g++
 	CC       = $(BHOST)/bin/arm-none-linux-gnueabihf-gcc
 	SLIBPATH = -L$(BHOST)/usr/lib
-	INCLPATH = -I$(BHOST)/usr/include -I./include
+	INCLPATH = -I$(BHOST)/usr/include -I. $(shell pkg-config --cflags glib-2.0)
 	CCLAB    = CC/ARM
 	DLIBPATH = $(BHOST)/usr/lib
 
@@ -49,7 +49,7 @@ else
 	CPP      = g++
 	CC       = gcc
 	SLIBPATH = -L/usr/lib/x86_64-linux-gnu -L/usr/local/lib/x86_64-linux-gnu
-	INCLPATH = -I/usr/include -I/usr/local/include -I./include
+	INCLPATH := -I/usr/include -I/usr/local/include -I. $(shell pkg-config --cflags glib-2.0)
 	CCLAB    = CC/X86
 	DLIBPATH = /usr/local/lib/x86_64-linux-gnu
 endif
@@ -198,7 +198,7 @@ test_RS485_%:		../RS485_%.o test_RS485_%.o libForTests.o
 
 utest_%:			utest_%.o libForTests.o %.o RS485_commonLib.o
 				@echo "[LD 4] $@"
-				@$(CC) -Wall -o $@ $^ -lm -lMinuteC -lsqlite3
+				@$(CC) -Wall -o $@ $^ -lm -lMinuteC -lsqlite3 $(shell pkg-config --static --libs glib-2.0)
 
 
 utest_%:			utest_%.o libForTests.o RS485_commonLib.o
