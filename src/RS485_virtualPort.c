@@ -299,7 +299,7 @@ RS485emErrorCodes_t open_virtualPort (virtualPort_t* item) {
 	RS485emErrorCodes_t err = RS485EMULE_SUCCESS;
 	struct termios    options;
 
-	if (item->fd < 0)
+	if (item->fd > 0)
 		// ERROR!
 		err = RS485EMULE_ERROR_UNAVAILRES;
 	
