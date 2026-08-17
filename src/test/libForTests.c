@@ -39,13 +39,31 @@ static bool randInitFlag = false;
 //------------------------------------------------------------------------------------------------------------------------------
 //                                           P R I V A T E   F U N C T I O N S
 //------------------------------------------------------------------------------------------------------------------------------
-void srandInit() {
+static void srandInit() {
 	if (randInitFlag == false) {
 		// srand() should only be called one time only.
 		srand(time(NULL));
 		randInitFlag = true;
 	}
 	return;
+}
+
+static bool _isInSet(char char_a, const char *set) {
+	//
+	// Description:
+	//	It looks for the (char_a) argument defined char into the set defined by the other argument
+	//
+	bool found = false;
+	uint8_t t = 0;
+	uint8_t end = length(set) < 255 ? length(set) : 0;
+	while (t < end ) {
+		if (char_a == set[t]) {
+			found = true;
+			break;
+		}
+		t++;
+	}
+	return(found);
 }
 
 //------------------------------------------------------------------------------------------------------------------------------
@@ -105,43 +123,42 @@ unsigned int randomInt (unsigned int scale) {
 }
 
 
-void init_stringList (char **pList, unsigned int noi) {
-	for (unsigned int t = 0; t < noi; t++) pList[t] = NULL;
+
+void print_stringList (const GPtrArray *list) {
+	unsigned int t = 0;
+	char         *str = NULL;
+	if (for (guint i = 0; i < list->len; i++)
+		printf("%s\n", (char *)g_ptr_array_index(list, i));)
+	
 	return;
 }
 
 
-unsigned int getSize_stringList (const char **list) {
+unsigned int split_stringList (GPtrArray *list, const char *src, const char *splitter) {
 	//
 	// Description:
-	//	It returns the size of argument defined ports list 
+	//	It converts a single-character splitted string in a strings list array.
 	//
-	unsigned int t = 0;
-	while (list[t] != NULL) t++;
-	return(t);
-}
+	// Returned value:
+	//	The number of added strings
+	//
+	char         word[1024];
+	unsigned int t = 0, wordIdx = 0;
 
-
-void free_stringList (char **list) {
-	//
-	// Description:
-	//	It releases the memory resources used by the chars-string items
-	//
-	unsigned int t = 0;
-	while (list[t] != NULL) {
-		free(list[t]);
-		list[t] = NULL;
+	world[0] = '\0';
+	while (src[t] != '\0') {
+		if (_isInSet(src[t], splitter)) {
+			if (wordIdx > 0) {
+				word[(wordIdx + 1)] = '\0';
+				g_ptr_array_add(list, strdup(word));
+				word[0] = '\0';
+				wordIdx = 0;
+			}
+		} else {
+			word[wordIdx] = src[t];
+			wordIdx++;
+		}
 		t++;
 	}
-	return;
-}
-
-
-void print_stringList (const char **list) {
-	unsigned int t = 0;
-	while (list[t] != NULL) {
-		printf("%s\n", list[t]);
-		t++;
-	}
-	return;
+	return(list->len);
 }
