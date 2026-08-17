@@ -39,7 +39,7 @@ ifeq ($(ARCH), arm)
 	CPP      = $(BHOST)/bin/arm-none-linux-gnueabihf-g++
 	CC       = $(BHOST)/bin/arm-none-linux-gnueabihf-gcc
 	SLIBPATH = -L$(BHOST)/usr/lib
-	INCLPATH = -I$(BHOST)/usr/include -I.
+	INCLPATH := -I$(BHOST)/usr/include  -I/usr/local/include -I. $(shell pkg-config --cflags glib-2.0)
 	CCLAB    = CC/ARM
 	DLIBPATH = $(BHOST)/usr/lib
 
@@ -47,7 +47,7 @@ else
 	CPP      = g++
 	CC       = gcc
 	SLIBPATH = -L/usr/lib/x86_64-linux-gnu -L/usr/local/lib/x86_64-linux-gnu
-	INCLPATH = -I/usr/include -I/usr/local/include -I.
+	INCLPATH := -I/usr/include -I/usr/local/include -I. $(shell pkg-config --cflags glib-2.0)
 	CCLAB    = CC/X86
 	DLIBPATH = /usr/local/lib/x86_64-linux-gnu
 endif
@@ -137,3 +137,4 @@ clean:
 cleanall:			clean
 				@echo "[CLEANALL]"
 				@rm -fv $(prjComponents)
+
