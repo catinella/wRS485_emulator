@@ -99,7 +99,7 @@ static int _usedPorts_callback (void *psl, int count, char **data, char **column
 	//	data    - The row's data
 	//	columns - The column names
 	//
-	if (psl == NULL) {
+	if (psl != NULL) {
 		struct queryRetData *qrd = (struct queryRetData*)psl;
 		
 		if (count != 1 || strcmp(columns[0], "busPort") != 0) {
@@ -218,7 +218,6 @@ RS485emErrorCodes_t usedPorts_portsDB (GPtrArray *portsList) {
 	struct queryRetData qrd;
 
 	// Initialization...
-	_usedPorts_callback(NULL, 0, NULL, NULL);
 	qrd.list = portsList;
 	qrd.err  = RS485EMULE_SUCCESS;
 	
