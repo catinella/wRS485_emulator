@@ -27,8 +27,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdbool.h>
-#include <unistd.h>
-#include <time.h>
+//#include <unistd.h>
+//#include <time.h>
 #include <libForTests.h>
 
 #define FIRSTASCIICHAR 60
@@ -55,7 +55,7 @@ static bool _isInSet(char char_a, const char *set) {
 	//
 	bool found = false;
 	uint8_t t = 0;
-	uint8_t end = length(set) < 255 ? length(set) : 0;
+	uint8_t end = strlen(set) < 255 ? strlen(set) : 0;
 	while (t < end ) {
 		if (char_a == set[t]) {
 			found = true;
@@ -125,10 +125,8 @@ unsigned int randomInt (unsigned int scale) {
 
 
 void print_stringList (const GPtrArray *list) {
-	unsigned int t = 0;
-	char         *str = NULL;
-	if (for (guint i = 0; i < list->len; i++)
-		printf("%s\n", (char *)g_ptr_array_index(list, i));)
+	for (unsigned int i = 0; i < list->len; i++)
+		printf("%s\n", (char *)g_ptr_array_index(list, i));
 	
 	return;
 }
@@ -145,7 +143,7 @@ unsigned int split_stringList (GPtrArray *list, const char *src, const char *spl
 	char         word[1024];
 	unsigned int t = 0, wordIdx = 0;
 
-	world[0] = '\0';
+	word[0] = '\0';
 	while (src[t] != '\0') {
 		if (_isInSet(src[t], splitter)) {
 			if (wordIdx > 0) {
