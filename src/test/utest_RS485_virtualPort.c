@@ -20,15 +20,13 @@
 // 
 -------------------------------------------------------------------------------------------------------------------------------*/
 #include <stdio.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
 #include <unistd.h>
 #include <stdint.h>
 #include <stdlib.h>
-#include <signal.h>
 #include <string.h>
 #include <sqlite3.h>
+#include <glib.h>
+#include <libForTests.h>
 #include <debugTools.h>
 #include <minute.h>
 #include <RS485_emulator.h>
@@ -36,30 +34,10 @@
 #include <RS485_virtualPort.h>
 
 struct qRetData {
-	char              **list;
+	GPtrArray         *list;
 	unsigned int      itsNumber;
 	RS485emErrorCodes_t err;
 };
-
-//static bool initFlag = false;
-
-/*
-static void _sigHandler (int signum) {
-	printf("%d-signal received\n", signum);
-	return;
-}
-
-static void _init() {
-	if (initFlag == false) {
-		printf("PID: %d\n", getpid());
-		signal(SIGHUP,  _sigHandler);
-		signal(SIGTTIN, _sigHandler);
-		signal(SIGTTOU, _sigHandler);
-		initFlag = true;
-	}
-	return;
-}
-*/
 
 static int _myCB (void *psl, int count, char **data, char **columns) {
 	//
@@ -74,26 +52,16 @@ static int _myCB (void *psl, int count, char **data, char **columns) {
 	//	data    - The row's data
 	//	columns - The column names
 	//
-	static portsDBindexType idx = 0;
-
-	if (psl == NULL)
-		// Function initialization
-		idx = 0;
-
-	else {
+	if (psl != NULL) {
 		struct qRetData *qrd = (struct qRetData*)psl;
 		
 		if (strcmp(columns[0], "busPort") != 0) {
 			// ERROR! (You should never get this error)
 			qrd->err = RS485EMULE_ERROR_INTERNAL;
 		} else {
-			qrd->list[idx] = strdup(data[0]);
-			qrd->itsNumber = idx;
+			g_ptr_array_add(qrd->list, (gpointer)strdup(data[0]));
 			//DBGTRACE
 		}
-		idx++;
-		qrd->list[idx] = NULL;
-		
 	}
 	return(0);
 }
@@ -110,6 +78,95 @@ TEST (RS485_virtualPort_testingSuite, newPortCreation) {
 	err = create_virtualPort(&newport, RS485EMULE_PORTSLAVE);
 	ASSERT_EQ (err, RS485EMULE_SUCCESS);
 
+	{
+		FILE  *fh = NULL;
+		char  procFile[PATH_MAX];
+		char  line[1024];
+		pid_t tPid = getpid();
+
+		sprintf(procFile, "/proc/%d/task/%d/children", tPid, tPid);
+		if ((fh = fopen(procFile, "r")) == NULL) {
+			// ERROR!
+			fprintf (
+				stderr, "ERROR(%d)! I cannot open the \"/proc/%d/task/%d/children\" file (errno=%d)\n",
+				__LINE__, tPid, tPid, errno
+			);
+		
+		} else if (fgets(line, sizeof(line), fh) == NULL) {
+			// ERROR!
+			fprintf (
+				stderr, "ERROR(%d)! I cannot read the \"/proc/%d/task/%d/children\" file (errno=%d)\n",
+				__LINE__, tPid, tPid, errno
+			);
+
+		} else {
+			GPtrArray    *pidsList = g_ptr_array_new_with_free_func(g_free);
+				
+			//
+			// Because the test has created one port, this process should have a single child-process where socat
+			// is running
+			//
+			ASSERT_EQ (1, split_stringList(pidsList, line, " \t"));
+
+			if (pidsList->len == 1) {
+				tPid = atoi((char*)g_ptr_array_index(pidsList, 0));
+	
+				if (tPid == 0) {
+					// ERROR
+					fprintf (stderr, "ERROR(%d)! Internal error in the testing code\n", __LINE__);
+				
+				} else {
+					FILE *pFH = NULL;
+					sprintf(procFile, "/proc/%d/cmdline", tPid);
+					if ((pFH = fopen(procFile, "r")) == NULL) {
+						// ERROR!
+						fprintf (
+							stderr, "ERROR(%d)! I cannot open the \"/proc/%d/cmdline\" file (errno=%d)\n",
+							__LINE__, tPid, errno
+						);
+
+					} else if (fgets(line, sizeof(line), pFH) == NULL) {
+						// ERROR!
+						fprintf (
+							stderr, "ERROR(%d)! I cannot read the \"/proc/%d/cmdline\" file (errno=%d)\n",
+							__LINE__, tPid, errno
+						);
+						fclose(pFH);
+
+					} else {
+						char *file = NULL;
+						chomp(line);
+						if ((file = strrchr(line, '/')) == NULL)
+							file = line;
+						else
+							file++;
+
+						if (fileArgumentsDb_get("verbose", NULL)) 
+							printf("Child process: \"%s\"\n", file);
+							
+						// Checking for the child process' executable file
+						ASSERT_EQ (0, strcmp(file, "socat"));
+					}
+					
+					if (pFH != NULL) fclose(pFH);
+				}			
+			}
+			fclose(fh);
+
+			g_ptr_array_free(pidsList, TRUE);
+		}
+	}
+
+	free_virtualPort(&newport);
+
+	// Ports-database closing
+	close_portsDB();
+	return;
+}
+
+
+TEST (RS485_virtualPort_testingSuite, dataExchange) {
+	/*
 	if (err == RS485EMULE_SUCCESS) {
 		sqlite3         *portsDB = NULL;
 		char            sqlStatement[1024];
@@ -141,89 +198,6 @@ TEST (RS485_virtualPort_testingSuite, newPortCreation) {
 		}
 	}
 	
-	free_virtualPort(&newport);
-
-	// Ports-database closing
-	close_portsDB();
-	return;
-}
-
-
-TEST (RS485_virtualPort_testingSuite, dataExchange) {
-	/*
-	struct virtualPort_t newport;
-	RS485emErrorCodes_t  err    = RS485EMULE_SUCCESS;
-	pid_t              pid    = 0;
-	char               *data  = "qwertyuiop1234567890";
-	
-	_init();
-	
-	init_virtualPort(&newport);
-	err = create_virtualPort(&newport, RS485EMULE_PORTSLAVE);
-	
-	pid = fork();
-
-	if (pid < 0) {
-		fprintf(stderr, "ERROR! I cannot create sub-processes\n");
-
-	} else if (pid == 0) {
-		char port[PATH_MAX];
-		int  fd;
-		
-		init_RS485emulatorAPI();
-		err = takePort_RS485emulatorAPI(port);
-		//printf("Sub-process get the \"%s\" port\n", port);
-		if (err == RS485EMULE_SUCCESS) {
-			uint8_t dataSize = sizeof(char)*(1 + strlen(data));
-			fd = open(port, O_RDWR|O_NOCTTY);
-			if (fd < 0)
-				fprintf(stderr, "ERROR! I cannot open the \"%s\" port\n", port);
-			else {
-				uint8_t ts=0, ps=1;
-				if (write(fd, (void*)&dataSize, sizeof(dataSize)) == sizeof(dataSize)) {
-					//printf("Sent data: %s\n", data); fflush(stdout);
-
-					while (ts < dataSize && ps > 0) {
-						ps = write(fd, (void*)(data+ts), (dataSize-ts));
-						if (ps > 0) ts = ts + ps;
-					}
-					if (ps < 0)
-						fprintf(stderr, "ERROR! IO operations failed (line=%d)\n", __LINE__);
-
-					sleep(1);
-				} else
-					fprintf(stderr, "ERROR! IO operations failed (line=%d)\n", __LINE__);
-			}
-			close(fd);
-		} else 
-			fprintf(stderr, "ERROR! (%d) I cannot assign the port to my sub-process\n", err);
-				
-		close_RS485emulatorAPI();
-		exit(err);
-			
-	} else {
-		uint8_t size = 0;
-		char    recData[256];
-		
-		err = open_virtualPort(&newport);
-		ASSERT_EQ (err, RS485EMULE_SUCCESS);
-		
-		err = recv_virtualPort(newport, &size, sizeof(size)); 
-		ASSERT_EQ (err, RS485EMULE_SUCCESS);
-
-		//printf("Data size: %d\n", (int)size);
-		//fflush(stdout);
-
-		err = recv_virtualPort(newport, recData, size); 
-		ASSERT_EQ (err, RS485EMULE_SUCCESS);
-
-		ASSERT_EQ (strcmp(recData, data), 0);
-	}		
-
-	free_virtualPort(&newport);
-	
-	// Ports-database closing
-	close_portsDB();
 	*/
 	return;
 }
