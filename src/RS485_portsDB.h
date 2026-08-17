@@ -40,8 +40,6 @@
 #define RS485_PORTSDBFILE   "/var/lib/RS485_emulator.db"
 #endif
 
-typedef uint8_t portsDBindexType;
-
 
 //
 // Used by the BUS emulator
