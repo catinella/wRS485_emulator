@@ -97,9 +97,8 @@ endif
 
 GCCOPTS = -Wall $(gopt) -std=c11 -D_XOPEN_SOURCE=600 -D_POSIX_C_SOURCE=200809L -D_DEFAULT_SOURCE
 
-.PHONY: emulator clean test cleanall install uninstall 
+.PHONY: emulator clean test cleanall install uninstall PRJ
 
-PRJLIB_FILE = ../libRS485emulatorAPI.so
 PRJLIB_L    = -lRS485emulatorAPI
 MINUTE_SCG  = /usr/local/share/minute/minute_cCodeGenerator.py
 
@@ -107,7 +106,7 @@ MINUTE_SCG  = /usr/local/share/minute/minute_cCodeGenerator.py
 #                                                 M A I N  R U L E S
 #-------------------------------------------------------------------------------------------------------------------------------
 
-all:				 $(PRJLIB_FILE) $(testsList) $(fakeDevsList) $(fakeMastersList)
+all:				PRJ $(testsList) $(fakeDevsList) $(fakeMastersList)
 
 clean:
 				@echo "[CLEAN]"
@@ -119,8 +118,7 @@ cleanall:			clean
 				@rm -fv $(testsList) $(fakeDevsList) $(fakeMastersList)
 				@make -C../ cleanall
 
-
-$(PRJLIB_FILE):	
+PRJ:
 				@make -C ../ all
 
 #-------------------------------------------------------------------------------------------------------------------------------
@@ -166,11 +164,6 @@ fakeMaster%.o:		fakeMaster%.c
 #                                               L I N K I N G   R U L E S
 #-------------------------------------------------------------------------------------------------------------------------------
 
-#utest_%.c:			utest_RS485_%.o ../%.o
-#				@echo "[LD C2] $@"
-#				@LD_LIBRARY_PATH="../" $(CC) -Wall -L../ -o $@ $^ -lsqlite3 
-
-
 utest_RS485_virtualPort:	utest_RS485_virtualPort.o RS485_virtualPort.o RS485_commonLib.o RS485_portsDB.o libForTests.o
 					@echo "[LD C3] $@"
 					@$(CC) -Wall -o $@ $^ -lm -lMinuteC -lsqlite3 $(shell pkg-config --static --libs glib-2.0)
@@ -183,17 +176,12 @@ endif
 
 fakeMaster%:		fakeMaster%.o libForTests.o
 				@echo "[LD 1] $@"
-				@LD_LIBRARY_PATH="../" $(CC) -Wall -L../ -o $@ $^ -lm -lsqlite3 $(PRJLIB_L)
+				@LD_LIBRARY_PATH="../" $(CC) -Wall -L../ -o $@ $^ -lm -lsqlite3 $(PRJLIB_L) $(shell pkg-config --static --libs glib-2.0)
 
 
-fakeSerialDev%:		fakeSerialDev%.o libForTests.o $(PRJLIB_FILE)
+fakeSerialDev%:		fakeSerialDev%.o libForTests.o 
 				@echo "[LD 2] $@"
-				@LD_LIBRARY_PATH="../" $(CC) -Wall -L../ -o $@ $^ -lm -lsqlite3 $(mbLinkOpt) $(PRJLIB_L)
-
-
-#test_RS485_%:		../RS485_%.o test_RS485_%.o libForTests.o
-#				@echo "[LD 3] $@"
-#				@$(CC) -Wall -o $@ $^ -lm -lMinuteC -lsqlite3 $(shell pkg-config --static --libs glib-2.0) 
+				@LD_LIBRARY_PATH="../" $(CC) -Wall -L../ -o $@ $^ -lm -lsqlite3 $(mbLinkOpt) $(PRJLIB_L) $(shell pkg-config --static --libs glib-2.0)
 
 
 utest_%:			utest_%.o libForTests.o %.o RS485_commonLib.o
