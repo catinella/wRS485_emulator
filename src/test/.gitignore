@@ -1,4 +1,9 @@
 utest_libForTests
 utest_RS485_portsDB
 utest_RS485_virtualPort
+fakeMaster1
+fakeMaster2
+fakeSerialDev1
+fakeSerialDev2
+utest_RS485_commonLib
 *.sgc
