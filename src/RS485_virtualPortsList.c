@@ -107,10 +107,9 @@ RS485emErrorCodes_t update_virtualPortsList (virtualPortsList_t *list, const GPt
 	//	RS485EMULE_SUCCESS
 	//	RS485EMULE_ERROR_INTERNAL
 	//
-	virtualPortsListItem_t *item = NULL;
+	virtualPortsListItem_t *item   = NULL;
 	virtualPort_t          *myport = NULL;
-	int                    i     = 0;
-	RS485emErrorCodes_t    err   = RS485EMULE_SUCCESS;
+	RS485emErrorCodes_t    err     = RS485EMULE_SUCCESS;
 	
 	if (list->head == NULL || list->tail == NULL)
 		// ERROR! (the list is empty)
@@ -122,7 +121,6 @@ RS485emErrorCodes_t update_virtualPortsList (virtualPortsList_t *list, const GPt
 		myport = list->head ? &(list->head->vpObj) : NULL;
 		
 		while (err == RS485EMULE_SUCCESS) {
-			i     = 0;
 			found = false;
 
 			item = list->it;
@@ -130,13 +128,12 @@ RS485emErrorCodes_t update_virtualPortsList (virtualPortsList_t *list, const GPt
 			if (myport == NULL) break;
 			
 			//printf("Checking for %s port..\n", myport->port);
-			while (found == false && g_ptr_array_index(busports, i) != NULL) {
+			for (unsigned int indx = 0; indx < busports->len; indx++) {
 				//DBGTRACE
-				if (strcmp(g_ptr_array_index(busports, i), myport->port) == 0) {
+				if (strcmp(g_ptr_array_index(busports, indx), myport->port) == 0) {
 					found = true;;
 					break;
 				}
-				i++;
 			}
 
 			if (found && myport->fd <= 0) {
