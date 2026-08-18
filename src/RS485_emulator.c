@@ -178,20 +178,22 @@ int main(int argc, char *argv[]) {
 		}
 	}
 
-	// Signal settings....	
+	// Signal settings
 	signal(SIGTERM,                sigHandler);
 	signal(SIGINT,                 sigHandler);
 	signal(RS485EMULE_UPDATESIGN,  sigHandler);
 
+	// Initialization
+	init_portsDB();
 	init_virtualPortsList(&vplist);
 	init_virtualPort(&masterPort);
 
-	// Master port creation...
+	// Master port creation
 	if ((err = create_virtualPort(&masterPort, RS485EMULE_PORTMASTER)) > 64) {
 		// ERROR!
 		fprintf(stderr, "ERROR! I cannot create the virtual serial port for the master device\n");
 		
-	// Master port opening...
+	// Master port opening
 	} else if ((err = open_virtualPort(&masterPort)) && err > 64) {
 		// ERROR!
 		fprintf(stderr, "ERROR! I cannot open the \"%s\" file\n", serialPort);
@@ -206,6 +208,9 @@ int main(int argc, char *argv[]) {
 		rs485emule_portsNum_type fdsNum;
 		struct timespec          pollTimeout;
 		chunkDataSize_type       trs = 0;
+
+		printf("DEBUG: Master's port: \"%s\"\n", masterPort.port);
+
 		
 		//
 		// Initialization....
@@ -213,7 +218,7 @@ int main(int argc, char *argv[]) {
 		pollTimeout.tv_sec = 0;
 		pollTimeout.tv_nsec = 100 * 1000 * 1000;
 		configRequest = true;
-		
+
 
 		//
 		// Virtual ports list population
@@ -225,7 +230,7 @@ int main(int argc, char *argv[]) {
 				exit(err);
 			}
 		}
-		
+
 
 		//
 		// Demonizing
