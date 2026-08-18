@@ -27,7 +27,6 @@
 #	Settings:
 #		ARCH       {x86|arm}
 #		BHOST      Buildroot's host folder
-#		PREFIX     Set your customized path where you want to install the RS485 emulator
 #		TESTMODE   Set it to execute the unit tests as unprivileged user
 #		GDB        It enables the debugger support
 #		NOMODBUS   It prevent the building of all tests where they include MODBUS support
@@ -66,7 +65,6 @@ fakeMastersList  := $(fMastersSrcsList:%.c=%)
 RS485EMULE_GROUP := $(shell sed -n 's/^tty:[^:]*:\([0-9]\+\):.*/\1/p' /etc/group)
 VERSION          := unknown
 
-PREFIX           ?= /usr/local
 TESTMODE         ?= 0 
 GDB              ?= 0
 NOMODBUS         ?= 0
@@ -99,7 +97,7 @@ GCCOPTS = -Wall $(gopt) -std=c11 -D_XOPEN_SOURCE=600 -D_POSIX_C_SOURCE=200809L -
 
 .PHONY: emulator clean test cleanall install uninstall PRJ
 
-PRJLIB_L    = -L../ -lRS485emulatorAPI
+PRJLIB_L    = -Wl,-rpath,../ -L../ -lRS485emulatorAPI
 MINUTE_SCG  = /usr/local/share/minute/minute_cCodeGenerator.py
 
 #-------------------------------------------------------------------------------------------------------------------------------
