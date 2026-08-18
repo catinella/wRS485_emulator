@@ -63,7 +63,7 @@ TESTMODE         ?= 0
 GDB              ?= 0
 DEBUG            ?= 0
 
-PRJHOME          := $(shell pwd)
+PRJHOME          := $(shell pwd)/..
 
 
 ifeq ($(GDB), 1)
