@@ -99,7 +99,7 @@ GCCOPTS = -Wall $(gopt) -std=c11 -D_XOPEN_SOURCE=600 -D_POSIX_C_SOURCE=200809L -
 
 .PHONY: emulator clean test cleanall install uninstall PRJ
 
-PRJLIB_L    = -lRS485emulatorAPI
+PRJLIB_L    = -L../ -lRS485emulatorAPI
 MINUTE_SCG  = /usr/local/share/minute/minute_cCodeGenerator.py
 
 #-------------------------------------------------------------------------------------------------------------------------------
@@ -176,12 +176,12 @@ endif
 
 fakeMaster%:		fakeMaster%.o libForTests.o
 				@echo "[LD 1] $@"
-				@LD_LIBRARY_PATH="../" $(CC) -Wall -L../ -o $@ $^ -lm -lsqlite3 $(PRJLIB_L) $(shell pkg-config --static --libs glib-2.0)
+				$(CC) -Wall -o $@ $^ -lm $(PRJLIB_L) $(shell pkg-config --static --libs glib-2.0)
 
 
 fakeSerialDev%:		fakeSerialDev%.o libForTests.o 
 				@echo "[LD 2] $@"
-				@LD_LIBRARY_PATH="../" $(CC) -Wall -L../ -o $@ $^ -lm -lsqlite3 $(mbLinkOpt) $(PRJLIB_L) $(shell pkg-config --static --libs glib-2.0)
+				$(CC) -Wall -o $@ $^ -lm $(mbLinkOpt) $(PRJLIB_L) $(shell pkg-config --static --libs glib-2.0)
 
 
 utest_%:			utest_%.o libForTests.o %.o RS485_commonLib.o
