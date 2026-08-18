@@ -104,10 +104,9 @@ all:				$(prjComponents)
 				@echo "[$(CCLAB)-SH] $@"
 				@$(CC) $(GCCOPTS) -Wall -Wextra -pedantic -fPIC -shared -c $(INCLPATH) -o $@ $(SYMBOLS) $<
 
-RS485_emulator:		RS485_emulator.o RS485_commonLib.o RS485_portsDB.o RS485_virtualPort.o \
-				RS485_virtualPortsList.o
+RS485_emulator:		RS485_emulator.o RS485_commonLib.o RS485_portsDB.o RS485_virtualPort.o RS485_virtualPortsList.o
 				@echo "[LD C1] $@"
-				@$(CC) -Wall $^ -lsqlite3 -o $@
+				@$(CC) -Wall -o $@ $^ -lsqlite3 $(shell pkg-config --static --libs glib-2.0)
 	
 RS485_updateSignal:	RS485_updateSignal.o RS485_commonLib.o
 				@echo "[LD C4] $@"
