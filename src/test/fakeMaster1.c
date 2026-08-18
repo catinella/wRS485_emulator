@@ -16,8 +16,8 @@
 // 
 // Description:
 //	This software is used to test the RS485 software emulatorhas with one or many fakeSerialDev1 istances. 
-//	When this fake master device is connected to the RS485 bus emulator, it start to sends foo data packages in broadcast to
-//	every slaves, for a given time. Every data-package will be stored with its timestamp by the slaves on file.
+//	When this fake master device is connected to the RS485 bus emulator, it starts to send foo data packages in broadcast to
+//	every slaves, for a given time. Every slave virtual device will store the data-package in a file file.
 //
 //	use: fakeMaster1 [--time=<seconds>] [--loopSleep=<milliseconds>]
 //

@@ -19,7 +19,7 @@
 //	first one is the slave-ID and the second is a number used by the slave's process to calculate the reply to send to the 
 //	master.
 //
-//		use: fakeSerialDev1 --id=<1-255>
+//		use: fakeSerialDev2 --id=<1-255>
 //	
 //	
 // Editor params: cols=128, tab-size=6
