@@ -20,7 +20,7 @@
 //	where their IDs are equals to the argument defined ones. Every slave will reply with its datapackage that allows the
 //	master to verify the content.
 //
-//	use: fakeMaster1 --ids=<1-255>[,<1-255>][...]  [--loopSleep=<milliseconds>]
+//	use: fakeMaster2 --ids=<1-255>[,<1-255>][...]  [--loopSleep=<milliseconds>]
 //
 //	Maximum allowed ID
 //	==================
