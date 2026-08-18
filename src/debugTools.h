@@ -19,6 +19,8 @@
 #ifndef DEBUGTOOLS
 #define DEBUGTOOLS
 
+#include <unistd.h>
+
 #define DBGTRACE \
     fprintf(stdout, "---> %s::%s() pid=%d line=%d\n", __FILE__, __func__, getpid(), __LINE__); fflush(stdout);
 
