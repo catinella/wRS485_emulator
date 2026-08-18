@@ -255,11 +255,13 @@ RS485emErrorCodes_t pidChk_portsDB(const char *port) {
 	RS485emErrorCodes_t err = RS485EMULE_SUCCESS;
 	char              sqlStatement[256];
 	pid_t             pid;
+	char              *sqliteErrMsg = NULL;
 	
 	sprintf(sqlStatement, "SELECT \"pid\" FROM portsDB WHERE busPort=\"%s\";", port);
-	if (sqlite3_exec(portsDB, sqlStatement, _pidByPort_callback, (void*)&pid, NULL) != SQLITE_OK) {
+	if (sqlite3_exec(portsDB, sqlStatement, _pidByPort_callback, (void*)&pid, &sqliteErrMsg) != SQLITE_OK) {
 		err = RS485EMULE_ERROR_INTERNAL;
-
+		printf("%s(%d): ERROR! %s\n", __PRETTY_FUNCTION__, __LINE__, sqliteErrMsg);
+		
 	} else if (pid > 0) {
 		struct stat buff;
 		char        folder[PATH_MAX];
