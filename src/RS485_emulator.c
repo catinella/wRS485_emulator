@@ -115,7 +115,7 @@ void summary (const char *execfile) {
 }
 
 
-void printErr (const char *message, rs485emule_portsNum_type ec) {
+void logMsg (const char *message, rs485emule_portsNum_type ec) {
 	//
 	// Description:
 	//	Centralized log message
@@ -250,7 +250,7 @@ int main(int argc, char *argv[]) {
 		}
 
 
-		printErr("RS485 emulator started", RS485EMULE_SUCCESS);
+		logMsg("RS485 emulator started", RS485EMULE_SUCCESS);
 		
 		//
 		// MAIN LOOP
@@ -258,7 +258,7 @@ int main(int argc, char *argv[]) {
 		while (loop) {
 			
 			if (configRequest) {
-				printErr("Configuration request detected", RS485EMULE_SUCCESS);
+				logMsg("Configuration request detected", RS485EMULE_SUCCESS);
 				
 				if ((err = usedPorts_portsDB(busports)) == RS485EMULE_SUCCESS) {
 					/*
@@ -291,9 +291,9 @@ int main(int argc, char *argv[]) {
 						}
 						fdsNum = t;
 					} else
-						printErr("I cannot update the connected ports list", err);
+						logMsg("I cannot update the connected ports list", err);
 				} else
-					printErr("I cannot retrive the list of the connected ports to slave devices", err);
+					logMsg("I cannot retrive the list of the connected ports to slave devices", err);
 				
 				configRequest = false;
 				//DBGTRACE
@@ -304,7 +304,7 @@ int main(int argc, char *argv[]) {
 
 			if (ret < 0 && errno != EINTR) {
 				// ERROR!
-				printErr("ppoll() failed", RS485EMULE_ERROR_IOFAILED);
+				logMsg("ppoll() failed", RS485EMULE_ERROR_IOFAILED);
 				
 			} else if (ret == 0) {
 				// TIMEOUT
@@ -316,11 +316,11 @@ int main(int argc, char *argv[]) {
 				
 				if (err > 64)
 					// ERROR!
-					printErr("I cannot check for dead processes", err);
+					logMsg("I cannot check for dead processes", err);
 				
 			} else {
 				if (ret > 1) {
-					printErr("Concurrent BUS access", RS485EMULE_WARNING_GENERIC);
+					logMsg("Concurrent BUS access", RS485EMULE_WARNING_GENERIC);
 				}
 				
 				if (fds[0].revents & POLLIN) {
@@ -331,7 +331,7 @@ int main(int argc, char *argv[]) {
 					
 					if (trs < 0) {
 						// ERROR!
-						printErr("I cannot read data from the serial port", RS485EMULE_ERROR_IOFAILED);
+						logMsg("I cannot read data from the serial port", RS485EMULE_ERROR_IOFAILED);
 						
 					} else if (trs > 0) {
 						//
@@ -342,7 +342,7 @@ int main(int argc, char *argv[]) {
 							if (virtualport->fd > 0) {
 								err = send_virtualPort (*virtualport, chunk, trs);
 								if (err != RS485EMULE_SUCCESS) {
-									printErr("I cannot send data to the fake devices", err);
+									logMsg("I cannot send data to the fake devices", err);
 									break;
 								}
 							}
@@ -369,7 +369,7 @@ int main(int argc, char *argv[]) {
 		//
 		// Resources releasing...
 		//
-		printErr("Shouting down procedure....", RS485EMULE_SUCCESS);
+		logMsg("Shouting down procedure....", RS485EMULE_SUCCESS);
 		if (foreground == false) closelog();
 		free(chunk);
 		g_ptr_array_free(busports, TRUE);
