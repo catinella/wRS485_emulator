@@ -71,6 +71,7 @@
 #include <signal.h>
 #include <fcntl.h>
 #include <poll.h>
+#include <glib.h>
 #include <errno.h>
 #include <syslog.h>
 #include <debugTools.h>
@@ -186,7 +187,7 @@ int main(int argc, char *argv[]) {
 	init_virtualPort(&masterPort);
 
 	// Master port creation...
-	if ((err = create_virtualPort(&masterPort, RS485EMULE_PORTMASTER)) && err > 64) {
+	if ((err = create_virtualPort(&masterPort, RS485EMULE_PORTMASTER)) > 64) {
 		// ERROR!
 		fprintf(stderr, "ERROR! I cannot create the virtual serial port for the master device\n");
 		
@@ -199,7 +200,7 @@ int main(int argc, char *argv[]) {
 		struct pollfd           fds[RS485EMULE_PORTSNUM+1];
 		int ret;
 		void                     *chunk = malloc(RS485_PKGDATA_SIZE);
-		char                     *busports[RS485EMULE_PORTSNUM+1];
+		GPtrArray                *busports = g_ptr_array_new_with_free_func(g_free);
 		virtualPort_t            *virtualport = NULL;
 		rs485emule_portsNum_type t;
 		rs485emule_portsNum_type fdsNum;
@@ -209,7 +210,6 @@ int main(int argc, char *argv[]) {
 		//
 		// Initialization....
 		//
-		for (t=0; t<RS485EMULE_PORTSNUM; t++) busports[t] = NULL;
 		pollTimeout.tv_sec = 0;
 		pollTimeout.tv_nsec = 100 * 1000 * 1000;
 		configRequest = true;
@@ -260,7 +260,7 @@ int main(int argc, char *argv[]) {
 			if (configRequest) {
 				printErr("Configuration request detected", RS485EMULE_SUCCESS);
 				
-				if ((err = usedPorts_portsDB(busports)) && err == RS485EMULE_SUCCESS) {
+				if ((err = usedPorts_portsDB(busports)) == RS485EMULE_SUCCESS) {
 					/*
 					//
 					// Used ports list on screen
@@ -275,7 +275,7 @@ int main(int argc, char *argv[]) {
 					}
 					*/
 					
-					if ((err = update_virtualPortsList(&vplist, (const char**)busports)) && err == RS485EMULE_SUCCESS) {
+					if ((err = update_virtualPortsList(&vplist, (const GPtrArray*)busports)) == RS485EMULE_SUCCESS) {
 						//DBGTRACE
 						resetIT_virtualPortsList(&vplist);
 	
@@ -284,7 +284,7 @@ int main(int argc, char *argv[]) {
 						fds[0].events = POLLIN;
 						t = 1;
 						
-						while((virtualport = next_virtualPortsList(&vplist)) && virtualport != NULL) {
+						while((virtualport = next_virtualPortsList(&vplist)) != NULL) {
 							fds[t].fd = virtualport->fd;
 							fds[t].events = POLLIN;
 							t++;
@@ -309,9 +309,8 @@ int main(int argc, char *argv[]) {
 			} else if (ret == 0) {
 				// TIMEOUT
 				//printf("Timeout\n");
-				err = pidsChk_virtualPortsList(&vplist);
 				
-				if (err == RS485EMULE_SUCCESS)
+				if ((err = pidsChk_virtualPortsList(&vplist)) == RS485EMULE_SUCCESS)
 					// The list has been changed
 					configRequest = true;
 				
@@ -373,6 +372,7 @@ int main(int argc, char *argv[]) {
 		printErr("Shouting down procedure....", RS485EMULE_SUCCESS);
 		if (foreground == false) closelog();
 		free(chunk);
+		g_ptr_array_free(busports, TRUE);
 		close_virtualPort(&masterPort);
 		free_virtualPort(&masterPort);
 		free_virtualPortsList(&vplist);

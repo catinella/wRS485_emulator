@@ -95,11 +95,13 @@ RS485emErrorCodes_t add_virtualPortsList (virtualPortsList_t *list) {
 }
 
 
-RS485emErrorCodes_t update_virtualPortsList (virtualPortsList_t *list, const char **busports) {
+RS485emErrorCodes_t update_virtualPortsList (virtualPortsList_t *list, const GPtrArray *busports) {
 	//
 	// Description:
-	//	It accepts a list of file names of assigned ports and set the argument defined virtual ports list considering the
-	//	files names set. To make the iteration faster, all not-yet-assigned ports are stored in the bottom side of the list.
+	//	It accepts a list of file names of assigned ports and updates the status of the argument defined virtual-ports,
+	//	considering the files names set. Updating method:
+	//		- Every virual-port's FD will be open if the port belongs to the list
+	//		- All virtual-ports not belong to the list will be closed
 	//
 	// Returned value:
 	//	RS485EMULE_SUCCESS
@@ -108,7 +110,7 @@ RS485emErrorCodes_t update_virtualPortsList (virtualPortsList_t *list, const cha
 	virtualPortsListItem_t *item = NULL;
 	virtualPort_t          *myport = NULL;
 	int                    i     = 0;
-	RS485emErrorCodes_t      err   = RS485EMULE_SUCCESS;
+	RS485emErrorCodes_t    err   = RS485EMULE_SUCCESS;
 	
 	if (list->head == NULL || list->tail == NULL)
 		// ERROR! (the list is empty)
@@ -128,15 +130,14 @@ RS485emErrorCodes_t update_virtualPortsList (virtualPortsList_t *list, const cha
 			if (myport == NULL) break;
 			
 			//printf("Checking for %s port..\n", myport->port);
-			while (found == false && busports[i] != NULL) {
+			while (found == false && g_ptr_array_index(busports, i) != NULL) {
 				//DBGTRACE
-				if (strcmp(busports[i], myport->port) == 0) {
+				if (strcmp(g_ptr_array_index(busports, i), myport->port) == 0) {
 					found = true;;
 					break;
 				}
 				i++;
 			}
-			
 
 			if (found && myport->fd <= 0) {
 				//
