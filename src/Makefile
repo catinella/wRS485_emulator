@@ -30,7 +30,6 @@
 #		PREFIX     Set your customized path where you want to install the RS485 emulator
 #		TESTMODE   Set it to execute the unit tests as unprivileged user
 #		GDB        It enables the debugger support
-#		NOMODBUS   It prevent the building of all tests where they include MODBUS support
 #
 #-------------------------------------------------------------------------------------------------------------------------------
 MAKEFLAGS += --no-builtin-rules
@@ -62,7 +61,6 @@ VERSION          := "unknown"
 PREFIX           ?= /usr/local
 TESTMODE         ?= 0 
 GDB              ?= 0
-NOMODBUS         ?= 0
 DEBUG            ?= 0
 
 PRJHOME          := $(shell pwd)
@@ -72,12 +70,6 @@ ifeq ($(GDB), 1)
 	gopt = -o0 -g
 else
 	gopt = -o2 
-endif
-
-ifeq ($(NOMODBUS), 1)
-	mbLinkOpt =
-else
-	mbLinkOpt = -lmodbus
 endif
 
 GCCOPTS = -Wall $(gopt) -std=c11 -D_XOPEN_SOURCE=600 -D_POSIX_C_SOURCE=200809L -D_DEFAULT_SOURCE
