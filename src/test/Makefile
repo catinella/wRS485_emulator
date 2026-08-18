@@ -59,18 +59,17 @@ fDevSrcsList     := $(shell ls fakeSerialDev*.c)
 fakeDevsList     := $(fDevSrcsList:%.c=%)
 fMastersSrcsList := $(shell ls fakeMaster*.c)
 fakeMastersList  := $(fMastersSrcsList:%.c=%)
-
-
-
 RS485EMULE_GROUP := $(shell sed -n 's/^tty:[^:]*:\([0-9]\+\):.*/\1/p' /etc/group)
-VERSION          := unknown
+PRJHOME          := $(shell pwd)
 
+#
+# Default configurable values
+#
+VERSION          ?= unknown
 TESTMODE         ?= 0 
 GDB              ?= 0
-NOMODBUS         ?= 0
+NOMODBUS         ?= 1
 DEBUG            ?= 0
-
-PRJHOME          := $(shell pwd)
 
 SYMBOLS = \
 	"-DTESTMODE=$(TESTMODE)"                  \
@@ -93,12 +92,11 @@ else
 	mbLinkOpt = -lmodbus
 endif
 
-GCCOPTS = -Wall $(gopt) -std=c11 -D_XOPEN_SOURCE=600 -D_POSIX_C_SOURCE=200809L -D_DEFAULT_SOURCE
-
-.PHONY: emulator clean test cleanall install uninstall PRJ
-
+GCCOPTS     = -Wall $(gopt) -std=c11 -D_XOPEN_SOURCE=600 -D_POSIX_C_SOURCE=200809L -D_DEFAULT_SOURCE
 PRJLIB_L    = -Wl,-rpath,../ -L../ -lRS485emulatorAPI
 MINUTE_SCG  = /usr/local/share/minute/minute_cCodeGenerator.py
+
+.PHONY: emulator clean test cleanall install uninstall PRJ
 
 #-------------------------------------------------------------------------------------------------------------------------------
 #                                                 M A I N  R U L E S
