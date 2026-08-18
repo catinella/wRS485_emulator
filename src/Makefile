@@ -33,6 +33,8 @@
 #		NOMODBUS   It prevent the building of all tests where they include MODBUS support
 #
 #-------------------------------------------------------------------------------------------------------------------------------
+MAKEFLAGS += --no-builtin-rules
+
 ARCH    ?= x86
 
 ifeq ($(ARCH), arm)
@@ -114,7 +116,7 @@ RS485_updateSignal:	RS485_updateSignal.o RS485_commonLib.o
 
 libRS485emulatorAPI.so:	RS485emulatorAPI-sh.o RS485_commonLib-sh.o
 				@echo "[LD-SO] $@"
-				@$(CC) -Wall $^ -shared -o $@
+				@$(CC) -Wall -shared -o $@ -Wl,-Bdynamic $^ -lsqlite3
 
 #-------------------------------------------------------------------------------------------------------------------------------
 #                                                 O T H E R   R U L E S
