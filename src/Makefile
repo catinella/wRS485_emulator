@@ -56,8 +56,8 @@ endif
 prjComponents     = RS485_emulator libRS485emulatorAPI.so RS485_updateSignal 
 
 RS485EMULE_GROUP := $(shell sed -n 's/^tty:[^:]*:\([0-9]\+\):.*/\1/p' /etc/group)
-VERSION          := "unknown"
 
+VERSION          ?= "unknown"
 PREFIX           ?= /usr/local
 TESTMODE         ?= 0 
 GDB              ?= 0
