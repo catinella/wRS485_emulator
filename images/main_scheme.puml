@@ -1,0 +1,69 @@
+@startuml
+
+!pragma layout vizjs
+
+top to bottom direction
+skinparam linetype polyline
+
+footer "It has been created with PlantUML"
+
+Rectangle " RS485 Master "       as MASTER
+Cloud     "\n RS485 BUS Emulator \n" as BUS
+
+Rectangle " Virtual Dev 1 " as DEV1
+Rectangle " Virtual Dev 2 " as DEV2
+Rectangle " Virtual Dev 3 " as DEV3
+Rectangle " Virtual Dev 4 " as DEV4
+Rectangle " Virtual Dev n " as DEV5
+
+Interface " Master Port  "  as MPORT
+Interface " Slave Port 1 "  as SPORT1
+Interface " Slave Port 2 "  as SPORT2
+Interface " Slave Port 3 "  as SPORT3
+Interface " Slave Port 4 "  as SPORT4
+Interface " Slave Port n "  as SPORT5
+
+note right of MASTER
+	Firmware under test
+end note
+
+note left of MPORT
+	Virtual Serial Port
+end note
+
+note bottom of DEV1
+	Virtual fake device
+end note
+
+note bottom of DEV2
+	Virtual fake device
+end note
+
+note bottom of DEV3
+	Virtual fake device
+end note
+
+note bottom of DEV4
+	Virtual fake device
+end note
+
+note bottom of DEV5
+	Virtual fake device
+end note
+
+MASTER <-down-> MPORT
+MPORT  <-down-> BUS
+
+BUS    <-down-> SPORT1
+BUS    <-down-> SPORT2
+BUS    <-down-> SPORT3
+BUS    <-down-> SPORT4
+BUS    <-down-> SPORT5
+
+SPORT1 <-down-> DEV1
+SPORT2 <-down-> DEV2
+SPORT3 <-down-> DEV3
+SPORT4 <-down-> DEV4
+SPORT5 <-down-> DEV5
+
+@enduml

@@ -25,26 +25,7 @@ As in the concrete RS485 communications, this virtual bus accepts one single mas
 means a unique master-port. About the slave-devices, the wRS485_emulator can accept many virtual-devices connected in the same
 time.
 
-
-	+--------------+
-	|              |          +-------------------------------------------------------+
-	| RS485 master |          |                      RS485 Emulator                   |
-	|   software   |          +----+-------------------+--+--+--+--+------------------+
-	|              |               |                   |  |  |  |  |
-	+------+-------+               |   +---------------+  |  |  |  +---------------+
-	       |         +-------------+   |                  |  |  |                  |
-	       |         |                 |          +-------+  |  +-------+          |
-	       |    +----+---+             |          |          |          |          |
-	       +--->| Master |         +---+---+  +---+---+  +---+---+  +---+---+  +---+---+
-	            |  port  |         | slave |  | slave |  | slave |  | slave |  | slave | 
-	            +--------+         | port  |  | port  |  | port  |  | port  |  | port  | 
-	                               +---+---+  +---+---+  +---+---+  +---+---+  +---+---+
-	                                   |          |          |          |          |
-	                                   |          |          |          |          |
-	                                +--+---+   +--+---+   +--+---+   +--+---+   +--+---+
-	                                | DEV1 |   | DEV2 |   | DEV3 |   | DEV4 |   | DEVn |  
-	                                +------+   +------+   +------+   +------+   +------+
-
+![Main scheme](images/main_scheme.png)
 
 ### 2.2 Build the source code
 In order to build the software you need the SQLite3 library and SOCAT tool. Using Debian-OS you have to install the following DEB packages:
