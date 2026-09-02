@@ -19,10 +19,7 @@
 //
 //
 -------------------------------------------------------------------------------------------------------------------------------*/
-
-#ifndef RS485EMULATOR
-
-#define RS485EMULATOR
+#pragma once
 
 #include <stdint.h>
 #include <signal.h>
@@ -49,59 +46,4 @@
 
 typedef uint8_t rs485emule_portsNum_type;
 
-//
-// Error Codes
-//
-typedef enum {
-	//-------------------------------------------
-	//         S U C C E S S   C O D E S
-	//                 [1-32]
-	//-------------------------------------------
-	RS485EMULE_SUCCESS              = 1,
-	RS485EMULE_INFO_AVAILABLEPORT   = 3,
-	RS485EMULE_INFO_LAST            = 32,
-	//-------------------------------------------
-	//        W A R N I N G   C O D E S
-	//                 [33-64]
-	//-------------------------------------------
-	RS485EMULE_WARNING_GENERIC      = 33,
-	RS485EMULE_WARNING_ITEMNOTFOUND = 35,
-	RS485EMULE_WARNING_NOTHINGTODO  = 37,
-	RS485EMULE_WARNING_TIMEOUT      = 39,
-	RS485EMULE_WARNING_UNAVAILRES   = 41,
-	RS485EMULE_WARNING_LAST         = 64,
-	//-------------------------------------------
-	//       B U S   E R R O R   C O D E S
-	//                  [65-128]
-	//-------------------------------------------
-	RS485EMULE_ERROR_GENERIC        = 65,
-	RS485EMULE_ERROR_UNKNOWNARG     = 67,
-	RS485EMULE_ERROR_IOFAILED       = 69,
-	RS485EMULE_ERROR_INTERNAL       = 71,
-	RS485EMULE_ERROR_FILENOTFOUND   = 73,
-	RS485EMULE_ERROR_ILLEGALSYNTAX  = 75,
-	RS485EMULE_ERROR_CORRUPTEDDATA  = 77,
-	RS485EMULE_ERROR_DATAOVERFLOW   = 79,
-	RS485EMULE_ERROR_NOSYSRESOURCE  = 81,
-	RS485EMULE_ERROR_MISSINGDATA    = 83,
-	RS485EMULE_ERROR_EXTPROCFAILED  = 85,
-	RS485EMULE_ERROR_NOSPACE        = 87,
-	RS485EMULE_ERROR_ITEMNOTFOUND   = 89,
-	RS485EMULE_ERROR_FORBIDDENOP    = 91,
-	RS485EMULE_ERROR_EXTTOOLFAILURE = 93,
-	RS485EMULE_ERROR_ILLEGALDATA    = 95,
-	RS485EMULE_ERROR_ILLEGALARG     = 97,
-	RS485EMULE_ERROR_UNKNOWN        = 99,
-	RS485EMULE_ERROR_UNAVAILRES     = 100,
-	RS485EMULE_ERROR_LAST           = 128,
-	//-------------------------------------------
-	// F A K E   D E V S   E R R O R   C O D E S
-	//                  [129-255]
-	//-------------------------------------------
-	
-} RS485emErrorCodes_t;
 
-
-
-
-#endif

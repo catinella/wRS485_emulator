@@ -25,15 +25,16 @@
 #include <stdlib.h>
 #include <signal.h>
 #include <sys/types.h>
+#include <wError.h>
 #include <RS485_emulator.h>
 #include <RS485_commonLib.h>
 
 
 int main() {
-	pid_t             busemPid = 0;
-	RS485emErrorCodes_t err      =  RS485emu_readPidFile(&busemPid, RS485EMULE_PIDFILE);
+	pid_t    busemPid = 0;
+	wError_t err      =  RS485emu_readPidFile(&busemPid, RS485EMULE_PIDFILE);
 
-	if (err < 64) kill(busemPid, RS485EMULE_UPDATESIGN);
+	if (WERROR_ISERROR(err) == false) kill(busemPid, RS485EMULE_UPDATESIGN);
 
-	return(RS485emu_bashErrorCode(err));
+	return(wError_shellCode(err));
 }

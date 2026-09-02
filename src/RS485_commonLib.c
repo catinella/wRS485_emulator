@@ -28,8 +28,7 @@
 #include <RS485_emulator.h>
 #include <RS485_commonLib.h>
 
-
-rs485emule_portsNum_type RS485emu_checkForProcStatus (pid_t pid, char *status) {
+wError_t RS485emu_checkForProcStatus (pid_t pid, char *status) {
 	//
 	// Descfription:
 	//	It checks for the status of the process associated to the given PID. The status will be written on the memory defined
@@ -37,12 +36,13 @@ rs485emule_portsNum_type RS485emu_checkForProcStatus (pid_t pid, char *status) {
 	//
 	// Returned value:
 	//	RS485EMULE_SUCCESS               The process is up and running
+	//	RS485EMULE_WARNING_ITEMNOTFOUND  The process is not currently running
 	//	RS485EMULE_ERROR_CORRUPTEDDATA   Unexpected data in /proc filesystem
 	//	RS485EMULE_ERROR_IOFAILED        File reading operation failed on /proc/<pid>/stat file
 	//
-	rs485emule_portsNum_type err = RS485EMULE_SUCCESS;
-	struct stat              statbuf;
-	char                     procPid[PATH_MAX];
+	struct stat statbuf;
+	char        procPid[PATH_MAX];
+	WERROR_DECLARATION(err, WERROR_JUSTCODE, RS485EMULE_SUCCESS)
 
 	*status = '\0';
 	sprintf(procPid, "/proc/%d", pid);
@@ -60,18 +60,18 @@ rs485emule_portsNum_type RS485emu_checkForProcStatus (pid_t pid, char *status) {
 						*status = tstat;
 					else
 						// ERROR! Unexpected data format
-						err = RS485EMULE_ERROR_CORRUPTEDDATA;
+						WERROR_GETCODE(err) = RS485EMULE_ERROR_CORRUPTEDDATA;
 						
 					fclose(fh);
 				} else
 					// ERROR! (I cannot open the /proc/<pid>/stat file)
-					err = RS485EMULE_ERROR_IOFAILED;
+					WERROR_GETCODE(err) = RS485EMULE_ERROR_IOFAILED;
 			} else
-				// ERROR! (You should never get this error)
-				err = RS485EMULE_ERROR_CORRUPTEDDATA;
+				// WARNING!
+				WERROR_GETCODE(err) = RS485EMULE_WARNING_ITEMNOTFOUND;
 		} else
 			// ERROR! (You should never get this error)
-			err = RS485EMULE_ERROR_CORRUPTEDDATA;
+			WERROR_GETCODE(err) = RS485EMULE_ERROR_CORRUPTEDDATA;
 	} else
 		// The process no more exists
 		*status = 'X';
@@ -79,7 +79,7 @@ rs485emule_portsNum_type RS485emu_checkForProcStatus (pid_t pid, char *status) {
 	return(err);
 }
 
-rs485emule_portsNum_type RS485emu_readPidFile (pid_t *pid, const char *file) {
+wError_t RS485emu_readPidFile (pid_t *pid, const char *file) {
 	//
 	// Descfription:
 	//	It retrives the pid information by the argument defined pid-file
@@ -89,9 +89,9 @@ rs485emule_portsNum_type RS485emu_readPidFile (pid_t *pid, const char *file) {
 	//	RS485EMULE_ERROR_CORRUPTEDDATA   The pid-file does not contain numeric PID
 	//	RS485EMULE_ERROR_IOFAILED        I cannot open the pid-file
 	//
-	rs485emule_portsNum_type err = RS485EMULE_SUCCESS;
-	FILE                     *fh = fopen(file, "r");
-	size_t                   msz = 16 * sizeof(char);
+	FILE      *fh = fopen(file, "r");
+	size_t    msz = 16 * sizeof(char);
+	WERROR_DECLARATION(err, WERROR_JUSTCODE, RS485EMULE_SUCCESS)
 	
 	if (fh != NULL) {
 		pid_t tmp  = 0;
@@ -100,27 +100,30 @@ rs485emule_portsNum_type RS485emu_readPidFile (pid_t *pid, const char *file) {
 			memset(line, 0, msz);
 			if (getline(&line, &msz, fh) > 0) {
 				tmp = atoi(line);
-				if (tmp > 0)   *pid = tmp;
-				else           err = RS485EMULE_ERROR_CORRUPTEDDATA;
+				if (tmp > 0)
+					*pid = tmp;
+				else
+					// ERROR!
+					WERROR_GETCODE(err) = RS485EMULE_ERROR_CORRUPTEDDATA;
 			} else {
 				// ERROR!
-				err = RS485EMULE_ERROR_IOFAILED;
+				WERROR_GETCODE(err) = RS485EMULE_ERROR_IOFAILED;
 			}
 			free(line);
 		} else
 			// ERROR!
-			err = RS485EMULE_ERROR_NOSYSRESOURCE;
+			WERROR_GETCODE(err) = RS485EMULE_ERROR_NOSYSRESOURCE;
 			
 		fclose(fh);
 	} else {
 		// ERROR!
-		err = RS485EMULE_ERROR_IOFAILED;
+		WERROR_GETCODE(err) = RS485EMULE_ERROR_IOFAILED;
 	}
 	
 	return(err);
 }
 
-rs485emule_portsNum_type RS485emu_writePidFile (pid_t pid, const char *file) {
+wError_t RS485emu_writePidFile (pid_t pid, const char *file) {
 	//
 	// Descfription:
 	//	It writes the given pid in the argument defined file
@@ -129,8 +132,10 @@ rs485emule_portsNum_type RS485emu_writePidFile (pid_t pid, const char *file) {
 	//	RS485EMULE_SUCCESS           PID has been correctly read       
 	//	RS485EMULE_ERROR_IOFAILED    I cannot open the pid-file
 	//
-	rs485emule_portsNum_type err = RS485EMULE_SUCCESS;
-	FILE                     *fh = fopen(file, "w");
+	// TODO: strerror(errno) message management adding
+	//
+	FILE *fh = fopen(file, "w");
+	WERROR_DECLARATION(err, WERROR_JUSTCODE, RS485EMULE_SUCCESS)
 	
 	if (fh != NULL) {
 		fprintf(fh, "%d", pid);
@@ -139,18 +144,12 @@ rs485emule_portsNum_type RS485emu_writePidFile (pid_t pid, const char *file) {
 		// The BUS is running as root, but the user must be able to read the pid-file
 		if (chmod(file, S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH) != 0)
 			// ERROR!
-			err = RS485EMULE_ERROR_IOFAILED;
+			WERROR_GETCODE(err) = RS485EMULE_ERROR_IOFAILED;
 	} else
 		// ERROR!
-		err = RS485EMULE_ERROR_IOFAILED;
+		WERROR_GETCODE(err) = RS485EMULE_ERROR_IOFAILED;
 	
 	return(err);
-}
-
-
-int RS485emu_bashErrorCode (rs485emule_portsNum_type ec) {
-	if (ec < 32) ec = 0;
-	return((int)ec);
 }
 
 

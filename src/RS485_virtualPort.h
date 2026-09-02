@@ -23,14 +23,13 @@
 //	
 //	
 -------------------------------------------------------------------------------------------------------------------------------*/
-
-#ifndef VIRTUALPORTS
-
-#define VIRTUALPORTS
+#pragma once
 
 #include <limits.h>
 #include <sys/types.h>
 #include <stdint.h>
+#include <RS485_errorCodes.h>
+#include <wError.h>
 #include <RS485_emulator.h>
 #include <RS485_commonLib.h>
 
@@ -53,13 +52,12 @@ typedef struct {
 } virtualPort_t;
 
 
-void                init_virtualPort    (virtualPort_t *item);
-virtualPort_t*      new_virtualPort     ();
-RS485emErrorCodes_t free_virtualPort    (virtualPort_t *item);
-RS485emErrorCodes_t create_virtualPort  (virtualPort_t *item, virtualPortRole_t role);
-RS485emErrorCodes_t open_virtualPort    (virtualPort_t *item);
-void                print_virtualPort   (virtualPort_t item);
-RS485emErrorCodes_t send_virtualPort    (virtualPort_t item, const void *data, chunkDataSize_type size);
-RS485emErrorCodes_t recv_virtualPort    (virtualPort_t item, void *data,       chunkDataSize_type size);
-RS485emErrorCodes_t close_virtualPort   (virtualPort_t *item);
-#endif
+void           init_virtualPort    (virtualPort_t *item);
+virtualPort_t* new_virtualPort     ();
+wError_t       free_virtualPort    (virtualPort_t *item);
+wError_t       create_virtualPort  (virtualPort_t *item, virtualPortRole_t role);
+wError_t       open_virtualPort    (virtualPort_t *item);
+void           print_virtualPort   (virtualPort_t item);
+wError_t       send_virtualPort    (virtualPort_t item, const void *data, chunkDataSize_type size);
+wError_t       recv_virtualPort    (virtualPort_t item, void *data,       chunkDataSize_type size);
+wError_t       close_virtualPort   (virtualPort_t *item);

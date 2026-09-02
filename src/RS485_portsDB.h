@@ -26,11 +26,11 @@
 //		                        mode. For this reason you SHOULD NOT change the folder to a system folder (eg. /var)
 //
 -------------------------------------------------------------------------------------------------------------------------------*/
-#ifndef RS485PORTSDB
-
-#define RS485PORTSDB
+#pragma once
 
 #include <glib.h>
+#include <RS485_errorCodes.h>
+#include <wError.h>
 #include <RS485_emulator.h>
 #include <RS485_virtualPort.h>
 
@@ -44,12 +44,10 @@
 //
 // Used by the BUS emulator
 //
-RS485emErrorCodes_t init_portsDB      ();
-void                close_portsDB     ();
-RS485emErrorCodes_t push_portsDB      (const char *busport, const char *devport, virtualPortRole_t role);
-RS485emErrorCodes_t usedPorts_portsDB (GPtrArray *portsList);
-void                print_portsDB     ();
-RS485emErrorCodes_t pidChk_portsDB    (const char *port);
+wError_t init_portsDB      ();
+void     close_portsDB     ();
+wError_t push_portsDB      (const char *busport, const char *devport, virtualPortRole_t role);
+wError_t usedPorts_portsDB (GPtrArray *portsList);
+void     print_portsDB     ();
+wError_t pidChk_portsDB    (const char *port);
 
-
-#endif

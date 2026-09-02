@@ -74,6 +74,7 @@
 #include <glib.h>
 #include <errno.h>
 #include <syslog.h>
+#include <wError.h>
 #include <debugTools.h>
 #include <RS485_commonLib.h>
 #include <RS485_portsDB.h>
@@ -114,39 +115,48 @@ void summary (const char *execfile) {
 	fprintf(stderr, "Use: %s [--foreground] [--help] [--version]\n", execfile);
 }
 
-
-void logMsg (const char *message, rs485emule_portsNum_type ec) {
+void logMsg (const char *message, wError_t ec) {
 	//
 	// Description:
 	//	Centralized log message
 	//
 	if (foreground) {
 		char symbol[32];
-		if      (ec <= 32)           strcpy(symbol, "[  INFO  ]"); 
-		else if (ec >32 && ec <= 64) strcpy(symbol, "[WARNING!]");
-		else                         strcpy(symbol, "[ ERROR! ]");
-		if (ec <= 64) {fprintf(stdout, "%s %s\n", symbol, message); fflush(stdout);}
-		else          {fprintf(stderr, "%s %s\n", symbol, message); fflush(stderr);}
+		if      (WERROR_ISSUCCESS(ec)) strcpy(symbol, "[  INFO  ]"); 
+		else if (WERROR_ISWARNING(ec)) strcpy(symbol, "[WARNING!]");
+		else                           strcpy(symbol, "[ ERROR! ]");
+		if (WERROR_ISERROR(ec)) {fprintf(stderr, "%s %s\n", symbol, message); fflush(stderr);}
+		else                    {fprintf(stdout, "%s %s\n", symbol, message); fflush(stdout);}
 	} else {
 		int priority;
-		if      (ec <= 32)           priority = LOG_INFO;
-		else if (ec >32 && ec <= 64) priority = LOG_WARNING;
-		else                         priority = LOG_ERR;
+		if      (WERROR_ISSUCCESS(ec)) priority = LOG_INFO;
+		else if (WERROR_ISWARNING(ec)) priority = LOG_WARNING;
+		else                           priority = LOG_ERR;
 		syslog(priority, message);
 	}
 	return;
 }
 
+void wrpLogMsg (const char *message, uint8_t ec) {
+	WERROR_DECLARATION(err, WERROR_JUSTCODE, ec);
+	logMsg (message, err);
+	return;
+}
+
+void wrpExit (uint8_t ec) {
+	WERROR_DECLARATION(err, WERROR_JUSTCODE, ec);
+	exit(wError_shellCode(err));
+	return;
+}
 
 //------------------------------------------------------------------------------------------------------------------------------
 //                                                       M A I N 
 //------------------------------------------------------------------------------------------------------------------------------
 int main(int argc, char *argv[]) {
 	char               serialPort[PATH_MAX];
-	uint8_t            err = RS485EMULE_SUCCESS;
 	virtualPort_t      masterPort;
-//	char               bufferForMessages[1024];
 	virtualPortsList_t vplist;
+	WERROR_DECLARATION(err, WERROR_JUSTCODE, RS485EMULE_SUCCESS);
 	
 	serialPort[0] = '\0';
 	
@@ -173,7 +183,7 @@ int main(int argc, char *argv[]) {
 			} else if (c > 0) {
 				fprintf(stderr, "ERROR! unknown argument\n");
 				summary(argv[0]);
-				exit(RS485emu_bashErrorCode(RS485EMULE_ERROR_UNKNOWNARG));
+				wrpExit(RS485EMULE_ERROR_UNKNOWNARG);
 			}
 		}
 	}
@@ -189,12 +199,12 @@ int main(int argc, char *argv[]) {
 	init_virtualPort(&masterPort);
 
 	// Master port creation
-	if ((err = create_virtualPort(&masterPort, RS485EMULE_PORTMASTER)) > 64) {
+	if ((err = create_virtualPort(&masterPort, RS485EMULE_PORTMASTER)), WERROR_ISERROR(err)) {
 		// ERROR!
 		fprintf(stderr, "ERROR! I cannot create the virtual serial port for the master device\n");
 		
 	// Master port opening
-	} else if ((err = open_virtualPort(&masterPort)) && err > 64) {
+	} else if ((err = open_virtualPort(&masterPort)), WERROR_ISERROR(err)) { 
 		// ERROR!
 		fprintf(stderr, "ERROR! I cannot open the \"%s\" file\n", serialPort);
 
@@ -225,9 +235,9 @@ int main(int argc, char *argv[]) {
 		//
 		for (t=0; t<RS485EMULE_PORTSNUM; t++) {
 			err = add_virtualPortsList(&vplist);
-			if (err != RS485EMULE_SUCCESS) {
+			if (WERROR_ISERROR(err)) {
 				fprintf(stderr, "ERROR! I cannot cretes the required virtual ports\n");
-				exit(err);
+				exit(wError_shellCode(err));
 			}
 		}
 
@@ -240,7 +250,7 @@ int main(int argc, char *argv[]) {
 
 			if (daemon(0,0) < 0) {
 				fprintf(stderr, "ERROR! daemon() syscall failed\n");
-				exit(RS485EMULE_ERROR_NOSYSRESOURCE);
+				wrpExit(RS485EMULE_ERROR_NOSYSRESOURCE);
 			}
 		}
 
@@ -249,13 +259,13 @@ int main(int argc, char *argv[]) {
 		// PID file creation
 		//
 		err = RS485emu_writePidFile(getpid(), RS485EMULE_PIDFILE);
-		if (err != RS485EMULE_SUCCESS) {
+		if (WERROR_ISERROR(err)) {
 			fprintf(stderr, "ERROR! I cannot cretes the \"%s\" pid-file\n", RS485EMULE_PIDFILE);
-			exit(err);
+			exit(wError_shellCode(err));
 		}
 
 
-		logMsg("RS485 emulator started", RS485EMULE_SUCCESS);
+		wrpLogMsg("RS485 emulator started", RS485EMULE_SUCCESS);
 		
 		//
 		// MAIN LOOP
@@ -263,9 +273,9 @@ int main(int argc, char *argv[]) {
 		while (loop) {
 			
 			if (configRequest) {
-				logMsg("Configuration request detected", RS485EMULE_SUCCESS);
+				wrpLogMsg("Configuration request detected", RS485EMULE_SUCCESS);
 				
-				if ((err = usedPorts_portsDB(busports)) == RS485EMULE_SUCCESS) {
+				if ((err = usedPorts_portsDB(busports)), WERROR_ISSUCCESS(err)) {
 					/*
 					//
 					// Used ports list on screen
@@ -280,7 +290,7 @@ int main(int argc, char *argv[]) {
 					}
 					*/
 					
-					if ((err = update_virtualPortsList(&vplist, (const GPtrArray*)busports)) == RS485EMULE_SUCCESS) {
+					if ((err = update_virtualPortsList(&vplist, (const GPtrArray*)busports)), WERROR_ISSUCCESS(err)) {
 						//DBGTRACE
 						resetIT_virtualPortsList(&vplist);
 	
@@ -296,8 +306,10 @@ int main(int argc, char *argv[]) {
 						}
 						fdsNum = t;
 					} else
+						// ERROR!
 						logMsg("I cannot update the connected ports list", err);
 				} else
+					// ERROR!
 					logMsg("I cannot retrive the list of the connected ports to slave devices", err);
 				
 				configRequest = false;
@@ -309,23 +321,27 @@ int main(int argc, char *argv[]) {
 
 			if (ret < 0 && errno != EINTR) {
 				// ERROR!
-				logMsg("ppoll() failed", RS485EMULE_ERROR_IOFAILED);
+				wrpLogMsg("ppoll() failed", RS485EMULE_ERROR_IOFAILED);
 				
 			} else if (ret == 0) {
 				// TIMEOUT
 				//printf("Timeout\n");
 				
-				if ((err = pidsChk_virtualPortsList(&vplist)) == RS485EMULE_SUCCESS)
+				if ((err = pidsChk_virtualPortsList(&vplist)), WERROR_ISSUCCESS(err)) 
 					// The list has been changed
 					configRequest = true;
 				
-				if (err > 64)
+				if (WERROR_ISERROR(err))
 					// ERROR!
 					logMsg("I cannot check for dead processes", err);
 				
 			} else {
 				if (ret > 1) {
-					logMsg("Concurrent BUS access", RS485EMULE_WARNING_GENERIC);
+					//
+					// === WARNING! ===
+					// Mome slave devices are sending data at the same time
+					//
+					wrpLogMsg("Concurrent BUS access", RS485EMULE_WARNING_GENERIC);
 				}
 				
 				if (fds[0].revents & POLLIN) {
@@ -336,7 +352,7 @@ int main(int argc, char *argv[]) {
 					
 					if (trs < 0) {
 						// ERROR!
-						logMsg("I cannot read data from the serial port", RS485EMULE_ERROR_IOFAILED);
+						wrpLogMsg("I cannot read data from the serial port", RS485EMULE_ERROR_IOFAILED);
 						
 					} else if (trs > 0) {
 						//
@@ -346,7 +362,7 @@ int main(int argc, char *argv[]) {
 						while((virtualport = next_virtualPortsList(&vplist)) != NULL) {
 							if (virtualport->fd > 0) {
 								err = send_virtualPort (*virtualport, chunk, trs);
-								if (err != RS485EMULE_SUCCESS) {
+								if (WERROR_ISERROR(err)) {
 									logMsg("I cannot send data to the fake devices", err);
 									break;
 								}
@@ -362,7 +378,7 @@ int main(int argc, char *argv[]) {
 							// Slave to master data exchange
 							trs = read(fds[t].fd, chunk, RS485_PKGDATA_SIZE);
 							if (trs > 0)    err = send_virtualPort(masterPort, chunk, trs);
-							else            err = RS485EMULE_ERROR_IOFAILED;
+							else            WERROR_GETCODE(err) = RS485EMULE_ERROR_IOFAILED;
 						}
 					}
 				}
@@ -374,7 +390,7 @@ int main(int argc, char *argv[]) {
 		//
 		// Resources releasing...
 		//
-		logMsg("Shouting down procedure....", RS485EMULE_SUCCESS);
+		wrpLogMsg("Shouting down procedure....", RS485EMULE_SUCCESS);
 		if (foreground == false) closelog();
 		free(chunk);
 		g_ptr_array_free(busports, TRUE);
@@ -383,5 +399,5 @@ int main(int argc, char *argv[]) {
 		free_virtualPortsList(&vplist);
 	}
 
-	return(RS485emu_bashErrorCode(err));
+	return(wError_shellCode(err));
 }

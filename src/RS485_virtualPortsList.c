@@ -65,7 +65,7 @@ void print_virtualPortsList (virtualPortsList_t *list) {
 }
 
 
-RS485emErrorCodes_t add_virtualPortsList (virtualPortsList_t *list) {
+wError_t add_virtualPortsList (virtualPortsList_t *list) {
 	//
 	// Description:
 	//	It creates a new emply virtual port, it uses the port to make a list item, and add the item to the list tail
@@ -74,8 +74,8 @@ RS485emErrorCodes_t add_virtualPortsList (virtualPortsList_t *list) {
 	//	see the create_virtualPort() documentation
 	//
 	virtualPortsListItem_t *item = NULL;
-	RS485emErrorCodes_t       err   = RS485EMULE_SUCCESS;
-
+	WERROR_DECLARATION(err, WERROR_JUSTCODE, RS485EMULE_SUCCESS)
+	
 	// List item creation
 	item = (virtualPortsListItem_t*)malloc(sizeof(virtualPortsListItem_t));
 	init_virtualPortsListItem(item);
@@ -95,7 +95,7 @@ RS485emErrorCodes_t add_virtualPortsList (virtualPortsList_t *list) {
 }
 
 
-RS485emErrorCodes_t update_virtualPortsList (virtualPortsList_t *list, const GPtrArray *busports) {
+wError_t update_virtualPortsList (virtualPortsList_t *list, const GPtrArray *busports) {
 	//
 	// Description:
 	//	It accepts a list of file names of assigned ports and updates the status of the argument defined virtual-ports,
@@ -109,18 +109,18 @@ RS485emErrorCodes_t update_virtualPortsList (virtualPortsList_t *list, const GPt
 	//
 	virtualPortsListItem_t *item   = NULL;
 	virtualPort_t          *myport = NULL;
-	RS485emErrorCodes_t    err     = RS485EMULE_SUCCESS;
+	WERROR_DECLARATION(err, WERROR_JUSTCODE, RS485EMULE_SUCCESS)
 	
 	if (list->head == NULL || list->tail == NULL)
 		// ERROR! (the list is empty)
-		err = RS485EMULE_ERROR_INTERNAL;
+		WERROR_GETCODE(err) = RS485EMULE_ERROR_INTERNAL;
 		
 	else {
 		bool found;
 		resetIT_virtualPortsList(list);
 		myport = list->head ? &(list->head->vpObj) : NULL;
 		
-		while (err == RS485EMULE_SUCCESS) {
+		while (WERROR_ISSUCCESS(err)) {
 			found = false;
 
 			item = list->it;
@@ -226,7 +226,7 @@ void free_virtualPortsList (virtualPortsList_t *list) {
 }
 
 
-RS485emErrorCodes_t pidsChk_virtualPortsList (virtualPortsList_t *list) {
+wError_t pidsChk_virtualPortsList (virtualPortsList_t *list) {
 	//
 	// Description:
 	//	It checks for ports owned by dead processes and releases the ports 
@@ -237,27 +237,27 @@ RS485emErrorCodes_t pidsChk_virtualPortsList (virtualPortsList_t *list) {
 	//	pidChk_portsDB() exit codes
 	//
 	virtualPortsListItem_t *ptr  = NULL;
-	RS485emErrorCodes_t      err   = RS485EMULE_WARNING_NOTHINGTODO;
 	bool                   flag  = false;
+	WERROR_DECLARATION(err, WERROR_JUSTCODE, RS485EMULE_WARNING_NOTHINGTODO);
 		
 	for (ptr = list->head; ptr != NULL; ptr = ptr->next) {
 		if (ptr->vpObj.fd > 0) {
 			err = pidChk_portsDB(ptr->vpObj.port);
-			if (err > 64)
+			if (WERROR_ISERROR(err))
 				break;
 				
-			else if (err == RS485EMULE_SUCCESS)
+			else if (WERROR_ISSUCCESS(err))
 				flag = true;
 		}
 	}
 
-	if (err <= 64) {
+	if (WERROR_ISERROR(err) == false) {
 		if (flag)
 			// SUCCESS!
-			err = RS485EMULE_SUCCESS;
+			WERROR_GETCODE(err) = RS485EMULE_SUCCESS;
 		else
 			// ERROR!
-			err = RS485EMULE_WARNING_NOTHINGTODO;
+			WERROR_GETCODE(err) = RS485EMULE_WARNING_NOTHINGTODO;
 	}
 	
 	return(err);

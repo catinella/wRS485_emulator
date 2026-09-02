@@ -25,6 +25,8 @@
 #define VIRTUALPORTSLIST
 
 #include <glib.h>
+#include <RS485_errorCodes.h>
+#include <wError.h>
 #include <RS485_virtualPort.h>
 
 typedef struct virtualPortsListItem virtualPortsListItem_t;
@@ -41,16 +43,16 @@ typedef struct {
 	virtualPortsListItem_t *it;
 } virtualPortsList_t;
 
-void                init_virtualPortsListItem (virtualPortsListItem_t *item);
+void           init_virtualPortsListItem (virtualPortsListItem_t *item);
 
-void                init_virtualPortsList     (virtualPortsList_t *list);
-RS485emErrorCodes_t add_virtualPortsList      (virtualPortsList_t *list);
-RS485emErrorCodes_t update_virtualPortsList   (virtualPortsList_t *list, const GPtrArray *busports);
-RS485emErrorCodes_t pidsChk_virtualPortsList  (virtualPortsList_t *list);
-virtualPort_t*      next_virtualPortsList     (virtualPortsList_t *list);
-void                resetIT_virtualPortsList  (virtualPortsList_t *list);
-void                free_virtualPortsList     (virtualPortsList_t *list);
-void                print_virtualPortsList    (virtualPortsList_t *list);
+void           init_virtualPortsList     (virtualPortsList_t *list);
+wError_t       add_virtualPortsList      (virtualPortsList_t *list);
+wError_t       update_virtualPortsList   (virtualPortsList_t *list, const GPtrArray *busports);
+wError_t       pidsChk_virtualPortsList  (virtualPortsList_t *list);
+virtualPort_t* next_virtualPortsList     (virtualPortsList_t *list);
+void           resetIT_virtualPortsList  (virtualPortsList_t *list);
+void           free_virtualPortsList     (virtualPortsList_t *list);
+void           print_virtualPortsList    (virtualPortsList_t *list);
 
 
 #endif

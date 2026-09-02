@@ -59,10 +59,10 @@ static int _getMasterPortCB (void *portname, int count, char **data, char **colu
 	return(0);
 }
 
-static int _getPortStatusCB (void *err, int count, char **data, char **columns) {
+static int _getPortStatusCB (void *err_a, int count, char **data, char **columns) {
 	//
 	// Description
-	//	This callback is executed to evaluate the port status and if it is in-use by another process.
+	//	This callback is executed to check the port availability.
 	//	It is deveoped to be used just by release_RS485emulatorAPI() function
 	//
 	// Arguments:
@@ -72,31 +72,33 @@ static int _getPortStatusCB (void *err, int count, char **data, char **columns) 
 	//	columns  - The column names
 	//
 	// Returned code:
-	//	RS485EMULE_SUCCESS
-	//	RS485EMULE_INFO_AVAILABLEPORT
-	//	RS485EMULE_ERROR_INTERNAL
-	//	RS485EMULE_ERROR_FORBIDDENOP
+	//	RS485EMULE_SUCCESS              The port is already assigned to the client
+	//	RS485EMULE_INFO_AVAILABLEPORT   The port is available
+	//	RS485EMULE_ERROR_INTERNAL       BUG
+	//	RS485EMULE_ERROR_FORBIDDENOP    The port is already used by another (client) process
 	//
-	RS485emErrorCodes_t _err = RS485EMULE_SUCCESS;
-	pid_t             myPid = getpid();
-	
+	pid_t myPid = getpid();
+	WERROR_DECLARATION(err, WERROR_JUSTCODE, RS485EMULE_SUCCESS);
+
 	if (count != 1 || strcmp(columns[0], "pid") != 0) {
 		// ERROR! (You should never get this error)
-		_err = RS485EMULE_ERROR_INTERNAL;
-		ERRORBANNER(_err) ;
+		WERROR_GETCODE(err) = RS485EMULE_ERROR_INTERNAL;
+		ERRORBANNER(WERROR_GETCODE(err))
 	
-	} else if (strcmp(data[0], "0") == 0)
+	} else if (strcmp(data[0], "0") == 0) {
 		// WARNING!
-		_err = RS485EMULE_INFO_AVAILABLEPORT;
+		WERROR_GETCODE(err) = RS485EMULE_INFO_AVAILABLEPORT;
 		
-	else if (atoi(data[0]) != myPid) {
+	} else if (atoi(data[0]) != myPid) {
 		// ERROR!
-		_err = RS485EMULE_ERROR_FORBIDDENOP;
-		ERRORBANNER(_err) ;
+		WERROR_GETCODE(err) = RS485EMULE_ERROR_FORBIDDENOP;
+		ERRORBANNER(WERROR_GETCODE(err))
 		//printf("The %d-proc is requiring a port used by %d-proc\n",myPid, atoi(data[0]));
 	}
 	
-	*(RS485emErrorCodes_t*)err = _err;
+
+	if (err_a == NULL)
+		memcpy(err_a, &err, sizeof(err));
 
 	return(0);
 }
@@ -125,7 +127,7 @@ int _sqlTransaction (sqlite3 *db, const char *op) {
 //------------------------------------------------------------------------------------------------------------------------------
 //                                        P U B L I C   F U N C T I O N S
 //------------------------------------------------------------------------------------------------------------------------------
-RS485emErrorCodes_t init_RS485emulatorAPI(void) {
+wError_t init_RS485emulatorAPI(void) {
 	//
 	// Description:
 	//	It initializes the module's static values. This function must be called before then any other one belongs to
@@ -137,7 +139,7 @@ RS485emErrorCodes_t init_RS485emulatorAPI(void) {
 	//	RS485EMULE_SUCCESS
 	//	RS485EMULE_ERROR_IOFAILED
 	//
-	RS485emErrorCodes_t err = RS485EMULE_SUCCESS;
+	WERROR_DECLARATION(err, WERROR_JUSTCODE, RS485EMULE_SUCCESS)
 
 	#if TESTMODE > 0
 	sprintf(rs485_updateTool, "%s/src/%s", PRJHOME, RS485EMULE_UPDATECMD);
@@ -146,8 +148,9 @@ RS485emErrorCodes_t init_RS485emulatorAPI(void) {
 	#endif
 	
 	if (sqlite3_open(RS485_PORTSDBFILE, &portsDB) != SQLITE_OK) {
-		err = RS485EMULE_ERROR_IOFAILED;
-		ERRORBANNER(err)
+		// ERROR!
+		WERROR_GETCODE(err) = RS485EMULE_ERROR_IOFAILED;
+		ERRORBANNER(RS485EMULE_ERROR_IOFAILED)
 	}
 	
 	return(err);
@@ -164,7 +167,7 @@ void close_RS485emulatorAPI(void) {
 }
 
 
-RS485emErrorCodes_t getMPort_RS485emulatorAPI (char *fpname) {
+wError_t getMPort_RS485emulatorAPI (char *fpname) {
 	//
 	// Description:
 	//	This function is used by the process with master role to get the the serial port name it has to use.
@@ -178,10 +181,10 @@ RS485emErrorCodes_t getMPort_RS485emulatorAPI (char *fpname) {
 	//	RS485EMULE_ERROR_ITEMNOTFOUND     No port available
 	//	RS485EMULE_ERROR_EXTTOOLFAILURE   rs485_updateTool returned an error
 	//
-	RS485emErrorCodes_t err = RS485EMULE_ERROR_ITEMNOTFOUND;
-	char              sqlStatement[PATH_MAX+64];
-	char              port[PATH_MAX];
-	int               rc;
+	char sqlStatement[PATH_MAX+64];
+	char port[PATH_MAX];
+	int  rc;
+	WERROR_DECLARATION(err, WERROR_JUSTCODE, RS485EMULE_ERROR_ITEMNOTFOUND)
 
 	*port = '\0';
 
@@ -192,35 +195,37 @@ RS485emErrorCodes_t getMPort_RS485emulatorAPI (char *fpname) {
 		rc = sqlite3_exec(portsDB, sqlStatement, _getMasterPortCB, (void*)port, NULL);
 		if (rc != SQLITE_OK) {
 			// ERROR!
-			err = RS485EMULE_ERROR_INTERNAL;
-			ERRORBANNER(err)
+			WERROR_GETCODE(err) = RS485EMULE_ERROR_INTERNAL;
+			ERRORBANNER(WERROR_GETCODE(err))
 			
 		} else if (strlen(port) > 0) {
 			sprintf(sqlStatement, "SELECT pid FROM portsDB WHERE devPort=\"%s\";", port);
 			rc = sqlite3_exec(portsDB, sqlStatement, _getPortStatusCB, (void*)&err, NULL);
 			
 			if (rc != SQLITE_OK) {
-				err = RS485EMULE_ERROR_INTERNAL;
-				ERRORBANNER(err)
+				// ERROR!
+				WERROR_GETCODE(err) = RS485EMULE_ERROR_INTERNAL;
+				ERRORBANNER(WERROR_GETCODE(err))
 		
-			} else if (err == RS485EMULE_INFO_AVAILABLEPORT) {
+			} else if (WERROR_GETCODE(err) == RS485EMULE_INFO_AVAILABLEPORT) {
 				sprintf(sqlStatement, "UPDATE portsDB SET pid=%d WHERE devPort=\"%s\";", getpid(), port); 
 				if (sqlite3_exec(portsDB, sqlStatement, NULL, NULL, NULL) == SQLITE_OK) {
-					err = RS485EMULE_SUCCESS;
+					WERROR_GETCODE(err) = RS485EMULE_SUCCESS;
 					strcpy(fpname, port);
+
 					if (system(rs485_updateTool) != 0) {
 						// ERROR!
-						err = RS485EMULE_ERROR_EXTTOOLFAILURE;
-						ERRORBANNER(err)
+						WERROR_GETCODE(err) = RS485EMULE_ERROR_EXTTOOLFAILURE;
+						ERRORBANNER(WERROR_GETCODE(err))
 					}
 				} else {
 					// ERROR!
-					err = RS485EMULE_ERROR_INTERNAL;
-					ERRORBANNER(err)
+					WERROR_GETCODE(err) = RS485EMULE_ERROR_INTERNAL;
+					ERRORBANNER(WERROR_GETCODE(err))
 				}
-			} else if (err == RS485EMULE_SUCCESS) {
+			} else if (WERROR_ISSUCCESS(err)) {
 				// The process is already the master's port owner
-				err = RS485EMULE_WARNING_NOTHINGTODO;
+				WERROR_GETCODE(err) = RS485EMULE_WARNING_NOTHINGTODO;
 				strcpy(fpname, port);
 			}
 		}		
@@ -229,19 +234,19 @@ RS485emErrorCodes_t getMPort_RS485emulatorAPI (char *fpname) {
 
 	} else if (rc == SQLITE_BUSY) {
 		// ERROR!
-		err = RS485EMULE_WARNING_TIMEOUT;
-		ERRORBANNER(err) ;
+		WERROR_GETCODE(err) = RS485EMULE_WARNING_TIMEOUT;
+		ERRORBANNER(WERROR_GETCODE(err))
 
 	} else {
 		// ERROR!
-		err = RS485EMULE_ERROR_INTERNAL;
-		ERRORBANNER(err) ;
+		WERROR_GETCODE(err) = RS485EMULE_ERROR_INTERNAL;
+		ERRORBANNER(WERROR_GETCODE(err))
 	}	
 	return(err);
 }
 
 
-RS485emErrorCodes_t release_RS485emulatorAPI (const char *serialport) {
+wError_t release_RS485emulatorAPI (const char *serialport) {
 	//
 	// Description:
 	//	It allows the client process to get an available virtual serial port
@@ -254,11 +259,10 @@ RS485emErrorCodes_t release_RS485emulatorAPI (const char *serialport) {
 	//	RS485EMULE_ERROR_FORBIDDENOP      The port is aòlready in use by another proc
 	//	RS485EMULE_WARNING_TIMEOUT
 	//
-	RS485emErrorCodes_t err = RS485EMULE_ERROR_ITEMNOTFOUND;
-	char              sqlStatement[256];
-	int               rc;
+	char sqlStatement[256];
+	int  rc;
+	WERROR_DECLARATION(err, WERROR_JUSTCODE, RS485EMULE_ERROR_ITEMNOTFOUND)
 	
-	DBGTRACE
 	rc = _sqlTransaction(portsDB, "BEGIN;");
 	if (rc == SQLITE_OK) {
 
@@ -266,56 +270,57 @@ RS485emErrorCodes_t release_RS485emulatorAPI (const char *serialport) {
 		rc = sqlite3_exec(portsDB, sqlStatement, _getPortStatusCB, (void*)&err, NULL);
 	
 		if (rc != SQLITE_OK) {
-			err = RS485EMULE_ERROR_INTERNAL;
-			ERRORBANNER(err)
+			// ERROR!
+			WERROR_GETCODE(err) = RS485EMULE_ERROR_INTERNAL;
+			ERRORBANNER(WERROR_GETCODE(err))
 			#if __DEBUG__ > 0
 			fprintf(stderr, "SQLite(%d): %s\n", rc, sqlite3_errstr(rc));
 			#endif
 			
-		} else if (err == RS485EMULE_INFO_AVAILABLEPORT) {
-			err = RS485EMULE_WARNING_NOTHINGTODO;
-			ERRORBANNER(err)
+		} else if (WERROR_GETCODE(err) == RS485EMULE_INFO_AVAILABLEPORT) {
+			// WARNING!
+			WERROR_GETCODE(err) = RS485EMULE_WARNING_NOTHINGTODO;
 	
-		} else if (err == RS485EMULE_SUCCESS) {
+		} else if (WERROR_GETCODE(err) == RS485EMULE_SUCCESS) {
 			sprintf(sqlStatement, "UPDATE portsDB SET pid=0 WHERE devPort=\"%s\";", serialport); 
 			rc = sqlite3_exec(portsDB, sqlStatement, NULL, NULL, NULL);
 			if (rc != SQLITE_OK) {
 				// ERROR!
-				err = RS485EMULE_ERROR_INTERNAL;
-				ERRORBANNER(err)
+				WERROR_GETCODE(err) = RS485EMULE_ERROR_INTERNAL;
+				ERRORBANNER(WERROR_GETCODE(err))
 				#if __DEBUG__ > 0
 				fprintf(stderr, "SQLite(%d): %s\n", rc, sqlite3_errstr(rc));
 				#endif
 				
 			} else if ((rc = _sqlTransaction(portsDB, "END;")) &&rc != SQLITE_OK) {
 				// ERROR!
-				err = RS485EMULE_ERROR_INTERNAL;
-				ERRORBANNER(err)
+				WERROR_GETCODE(err) = RS485EMULE_ERROR_INTERNAL;
+				ERRORBANNER(WERROR_GETCODE(err))
 				#if __DEBUG__ > 0
 				fprintf(stderr, "SQLite(%d): %s\n", rc, sqlite3_errstr(rc));
 				#endif
 
 			} else if (system(rs485_updateTool) != 0) {
 				// ERROR!
-				err = RS485EMULE_ERROR_EXTTOOLFAILURE;
-				ERRORBANNER(err)
+				WERROR_GETCODE(err) = RS485EMULE_ERROR_EXTTOOLFAILURE;
+				ERRORBANNER(WERROR_GETCODE(err))
 			}
 		} 
 	} else if (rc == SQLITE_BUSY) {
-		// ERROR!
-		err = RS485EMULE_WARNING_TIMEOUT;
-		ERRORBANNER(err)
+		// WARNING!
+		WERROR_GETCODE(err) = RS485EMULE_WARNING_TIMEOUT;
+		ERRORBANNER(WERROR_GETCODE(err))
 		
 	} else {
 		// ERROR!
-		err = RS485EMULE_ERROR_INTERNAL;
-		ERRORBANNER(err)
+		WERROR_GETCODE(err) = RS485EMULE_ERROR_INTERNAL;
+		ERRORBANNER(WERROR_GETCODE(err))
 	}
 	return(err);
 }
 
 
-RS485emErrorCodes_t takePort_RS485emulatorAPI (char *port) {
+wError_t takePort_RS485emulatorAPI (char *port) {
 	//
 	// Description:
 	//	It allows you to take the first available port
@@ -333,10 +338,10 @@ RS485emErrorCodes_t takePort_RS485emulatorAPI (char *port) {
 	//	RS485EMULE_WARNING_TIMEOUT       Reached timeout. But the function could be re-executed with success
 	//	RS485EMULE_ERROR_UNAVAILRES      The function failed, the resource was unexpectly unavailable
 	//
-	RS485emErrorCodes_t err = RS485EMULE_ERROR_ITEMNOTFOUND;
-	char              *sqlStatement = "SELECT devPort FROM portsDB WHERE pid=0 and role=\"S\";";
-	sqlite3_stmt      *stmt = NULL;
-	int               rc;
+	char         *sqlStatement = "SELECT devPort FROM portsDB WHERE pid=0 and role=\"S\";";
+	sqlite3_stmt *stmt         = NULL;
+	int          rc;
+	WERROR_DECLARATION(err, WERROR_JUSTCODE, RS485EMULE_ERROR_ITEMNOTFOUND)
 	
 	DBGTRACE
 	rc = _sqlTransaction(portsDB, "BEGIN;");
@@ -345,7 +350,7 @@ RS485emErrorCodes_t takePort_RS485emulatorAPI (char *port) {
 		if (sqlite3_prepare(portsDB, sqlStatement, -1, &stmt, NULL) == SQLITE_OK) {
 		
 			DBGTRACE
-			while(err == RS485EMULE_ERROR_ITEMNOTFOUND && (rc = sqlite3_step(stmt)) && rc != SQLITE_DONE) {
+			while (WERROR_GETCODE(err) == RS485EMULE_ERROR_ITEMNOTFOUND && (rc = sqlite3_step(stmt)) && rc != SQLITE_DONE) {
 				if (rc == SQLITE_BUSY) {
 					usleep(50000);
 					printf("DB busy\n");
@@ -353,14 +358,14 @@ RS485emErrorCodes_t takePort_RS485emulatorAPI (char *port) {
 				} else if (rc == SQLITE_ERROR) {
 					// ERROR!
 					printf("rc = %d\n", rc);
-					err = RS485EMULE_ERROR_EXTPROCFAILED;
-					ERRORBANNER(err)
+					WERROR_GETCODE(err) = RS485EMULE_ERROR_EXTPROCFAILED;
+					ERRORBANNER(WERROR_GETCODE(err))
 					break;
 	
 				} else if (rc == SQLITE_ROW) {
-					DBGTRACE
+					// SUCCESS!
 					strcpy(port, (const char*)sqlite3_column_text(stmt, 0));
-					err = RS485EMULE_SUCCESS;
+					WERROR_GETCODE(err) = RS485EMULE_SUCCESS;
 					break;
 				}
 			}
@@ -369,14 +374,13 @@ RS485emErrorCodes_t takePort_RS485emulatorAPI (char *port) {
 		
 		} else {
 			// ERROR!
-			err = RS485EMULE_ERROR_INTERNAL;
-			ERRORBANNER(err)
+			WERROR_GETCODE(err) = RS485EMULE_ERROR_INTERNAL;
+			ERRORBANNER(WERROR_GETCODE(err))
 		}
 
-		if (err == RS485EMULE_SUCCESS) {
-			char     sqlStatement[256];
+		if (WERROR_ISERROR(err) == false) {
+			char sqlStatement[256];
 			
-			DBGTRACE
 			sprintf(sqlStatement, "UPDATE portsDB SET pid=%d WHERE devPort=\"%s\";", getpid(), port);
 			
 			{
@@ -390,43 +394,42 @@ RS485emErrorCodes_t takePort_RS485emulatorAPI (char *port) {
 			}
 
 			// ERRORS!!
-			if (rc == SQLITE_READONLY) {
-				err = RS485EMULE_ERROR_FORBIDDENOP;
-				ERRORBANNER(err)
-			} else if (rc == SQLITE_BUSY) {
-				err = RS485EMULE_ERROR_UNAVAILRES;
-				ERRORBANNER(err)
-			} else if (rc != SQLITE_OK) {
-				err = RS485EMULE_ERROR_UNKNOWN;
-				ERRORBANNER(err)
+			{
+				bool ef = true;
+				if      (rc == SQLITE_READONLY)  WERROR_GETCODE(err) = RS485EMULE_ERROR_FORBIDDENOP;
+				else if (rc == SQLITE_BUSY)      WERROR_GETCODE(err) = RS485EMULE_ERROR_UNAVAILRES;
+				else if (rc != SQLITE_OK)        WERROR_GETCODE(err) = RS485EMULE_ERROR_UNKNOWN;
+				else                             ef = false;
+			
+				if (ef) {ERRORBANNER(WERROR_GETCODE(err))}
 			}
 		}
 	
-		if (err <= 64) {
+		if (WERROR_ISERROR(err) == false) {
 			rc = _sqlTransaction(portsDB, "END;");
 			if (rc != SQLITE_OK) {
 				// ERROR!
-				err = RS485EMULE_ERROR_UNKNOWN;
-				ERRORBANNER(err)
+				WERROR_GETCODE(err) = RS485EMULE_ERROR_UNKNOWN;
+				ERRORBANNER(WERROR_GETCODE(err))
 				
 			} else if (system(rs485_updateTool) != 0) {
 				// ERROR!
-				err = RS485EMULE_ERROR_EXTTOOLFAILURE;
-				ERRORBANNER(err)
+				WERROR_GETCODE(err) = RS485EMULE_ERROR_EXTTOOLFAILURE;
+				ERRORBANNER(WERROR_GETCODE(err))
 			}
 		}
 		
-		if (err > 64) *port = '\0';
+		if (WERROR_ISERROR(err)) *port = '\0';
 		
 	} else if (rc == SQLITE_BUSY) {
 		// ERROR!
-		err = RS485EMULE_WARNING_TIMEOUT;
-		ERRORBANNER(err)
+		WERROR_GETCODE(err) = RS485EMULE_WARNING_TIMEOUT;
+		ERRORBANNER(WERROR_GETCODE(err))
 		
 	} else {
 		// ERROR!
-		err = RS485EMULE_ERROR_INTERNAL;
-		ERRORBANNER(err)
+		WERROR_GETCODE(err) = RS485EMULE_ERROR_INTERNAL;
+		ERRORBANNER(WERROR_GETCODE(err))
 	}
 
 	return(err);

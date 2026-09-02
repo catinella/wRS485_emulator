@@ -40,7 +40,7 @@ ifeq ($(ARCH), arm)
 	CPP      = $(BHOST)/bin/arm-none-linux-gnueabihf-g++
 	CC       = $(BHOST)/bin/arm-none-linux-gnueabihf-gcc
 	SLIBPATH = -L$(BHOST)/usr/lib
-	INCLPATH := -I$(BHOST)/usr/include  -I/usr/local/include -I. $(shell pkg-config --cflags glib-2.0)
+	INCLPATH := -I$(BHOST)/usr/include  -I/usr/local/include -I. $(shell pkg-config --cflags glib-2.0) -I/usr/local/include/wError
 	CCLAB    = CC/ARM
 	DLIBPATH = $(BHOST)/usr/lib
 
@@ -48,7 +48,7 @@ else
 	CPP      = g++
 	CC       = gcc
 	SLIBPATH = -L/usr/lib/x86_64-linux-gnu -L/usr/local/lib/x86_64-linux-gnu
-	INCLPATH := -I/usr/include -I/usr/local/include -I. $(shell pkg-config --cflags glib-2.0)
+	INCLPATH := -I/usr/include -I/usr/local/include -I. $(shell pkg-config --cflags glib-2.0) -I/usr/local/include/wError
 	CCLAB    = CC/X86
 	DLIBPATH = /usr/local/lib/x86_64-linux-gnu
 endif
@@ -83,14 +83,14 @@ SYMBOLS =                                       \
 	"-D__DEBUG__=$(DEBUG)"                    \
 	"-DGDB=$(GDB)"                        
 
-.PHONY: emulator clean test cleanall install uninstall help _help
+.PHONY: emulator clean test cleanall install uninstall help _help 
 
 #-------------------------------------------------------------------------------------------------------------------------------
 #                                              C O M P I L I N G   R U L E S
 #-------------------------------------------------------------------------------------------------------------------------------
 all:				$(prjComponents)
 
-%.o:				%.c %.h
+%.o:				%.c %.h 
 				@echo "[$(CCLAB)] $@"
 				@$(CC) $(GCCOPTS) -c $(INCLPATH) -o $@ $(SYMBOLS) $<
 
@@ -100,11 +100,11 @@ all:				$(prjComponents)
 
 RS485_emulator:		RS485_emulator.o RS485_commonLib.o RS485_portsDB.o RS485_virtualPort.o RS485_virtualPortsList.o
 				@echo "[LD C1] $@"
-				@$(CC) -Wall -o $@ $^ -lsqlite3 $(shell pkg-config --static --libs glib-2.0)
+				@$(CC) -Wall -o $@ $^ -lsqlite3 $(shell pkg-config --libs glib-2.0) -lwError
 	
 RS485_updateSignal:	RS485_updateSignal.o RS485_commonLib.o
 				@echo "[LD C4] $@"
-				@$(CC) -Wall $^ -o $@
+				@$(CC) -Wall -o $@ $^ -lwError
 
 libRS485emulatorAPI.so:	RS485emulatorAPI-sh.o RS485_commonLib-sh.o
 				@echo "[LD-SO] $@"
@@ -128,6 +128,5 @@ clean:
 				@rm -fv *.o
 
 cleanall:			clean
-				@echo "[CLEANALL]"
 				@rm -fv $(prjComponents)
 
