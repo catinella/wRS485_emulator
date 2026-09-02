@@ -41,9 +41,9 @@
 bool signalFlag = false;
 
 struct qRetData {
-	GPtrArray         *list;
-	unsigned int      itsNumber;
-	RS485emErrorCodes_t err;
+	GPtrArray    *list;
+	unsigned int itsNumber;
+	wError_t     err;
 };
 
 #define PIDLIMIT 72000
@@ -72,7 +72,7 @@ bool _search_portsList(const char *port, const char **list) {
 */
 
 
-RS485emErrorCodes_t _fillDB(unsigned int noi, const char *prefix) {
+wError_t _fillDB(unsigned int noi, const char *prefix) {
 	//
 	// Description:
 	//	It fills the DB with foo values composed bt the argument defined prefix and a numerical suffix
@@ -84,15 +84,15 @@ RS485emErrorCodes_t _fillDB(unsigned int noi, const char *prefix) {
 	// Returned code:
 	//	Please, read the push_portsDB() documentation
 	//
-	char              bport[PATH_MAX];
-	char              dport[PATH_MAX];
-	RS485emErrorCodes_t err = RS485EMULE_SUCCESS;
+	char bport[PATH_MAX];
+	char dport[PATH_MAX];
+	WERROR_DECLARATION(err, WERROR_JUSTCODE, RS485EMULE_SUCCESS);
 	
 	for (unsigned int t=0; t<noi; t++) {
 		sprintf(bport, "%s%d", prefix, (t*4));
 		sprintf(dport, "%s%d", prefix, (t*4+1));
 		err = push_portsDB(bport, dport, RS485EMULE_PORTSLAVE);
-		if (err != RS485EMULE_SUCCESS) break;
+		if (WERROR_ISERROR(err)) break;
 	}
 	return(err);
 }
@@ -123,7 +123,7 @@ static int _myCB (void *psl, int count, char **data, char **columns) {
 		
 		if (strcmp(columns[0], "busPort") != 0) {
 			// ERROR! (You should never get this error)
-			qrd->err = RS485EMULE_ERROR_INTERNAL;
+			WERROR_GETCODE(qrd->err) = RS485EMULE_ERROR_INTERNAL;
 		} else {
 			g_ptr_array_add(qrd->list, (gpointer)strdup(*data));
 			//DBGTRACE
@@ -152,9 +152,10 @@ bool _getFooPorts (GPtrArray *portsList) {
 
 	// Initialization
 	qrd.list      = portsList;
-	qrd.err       = RS485EMULE_SUCCESS;
 	qrd.itsNumber = 0;
-
+	wError_init(&(qrd.err), WERROR_JUSTCODE);
+	WERROR_GETCODE(qrd.err) = RS485EMULE_SUCCESS;
+	
 	if ((rc = sqlite3_open(RS485_PORTSDBFILE, &portsDB)) != SQLITE_OK)
 		// ERROR!
 		printf ("ERROR(%d)! Test procedure intermnally failed\n", __LINE__);
@@ -164,9 +165,9 @@ bool _getFooPorts (GPtrArray *portsList) {
 			// ERROR!
 			printf ("ERROR(%d)! Test procedure intermnally failed (retcode=%d): %s\n", __LINE__, rc, sqliteErrMsg);
 	
-		else if (qrd.err != RS485EMULE_SUCCESS)
+		else if (WERROR_ISERROR(qrd.err))
 			// ERROR!
-			printf ("ERROR(%d)! Test procedure intermnally failed (retcode=%d)\n", __LINE__, qrd.err);
+			printf ("ERROR(%d)! Test procedure intermnally failed (retcode=%d)\n", __LINE__, WERROR_GETCODE(qrd.err));
 	
 		else
 			// SUCCESS
@@ -238,12 +239,13 @@ TEST (RS485_portsDB_testingSuite, dbCreation) {
 	// Description:
 	//	It tests the functions to open the dtatabase, write foo-data inside it, and close it.
 	//
-	RS485emErrorCodes_t err = RS485EMULE_SUCCESS;
+	WERROR_DECLARATION(err, WERROR_JUSTCODE, RS485EMULE_SUCCESS);
 	
 	err = init_portsDB();
-	ASSERT_EQ (err, RS485EMULE_SUCCESS);
+	ASSERT_TRUE (WERROR_ISSUCCESS(err));
+	
 	err = _fillDB(TESTNUMPORTS, PREFIX);
-	ASSERT_EQ (err, RS485EMULE_SUCCESS);
+	ASSERT_TRUE (WERROR_ISSUCCESS(err));
 
 	close_portsDB();
 	return;
@@ -259,14 +261,14 @@ TEST (RS485_portsDB_testingSuite, dbCheckForContent) {
 	//	 4) It tests the usedPorts_portsDB() function
 	//	 5) It checks for the list size
 	//
-	RS485emErrorCodes_t err = RS485EMULE_SUCCESS;
+	WERROR_DECLARATION(err, WERROR_JUSTCODE, RS485EMULE_SUCCESS);
 
 	// Module initialization
 	init_portsDB();
 
-	if ((err = _fillDB(TESTNUMPORTS, PREFIX)) != RS485EMULE_SUCCESS) {
+	if ((err = _fillDB(TESTNUMPORTS, PREFIX)), WERROR_ISERROR(err) == false) {
 		// ERROR!
-		printf ("ERROR(%d)! push_portsDB() call failed (retcode=%d)\n", __LINE__, err);
+		printf ("ERROR(%d)! push_portsDB() call failed (retcode=%d)\n", __LINE__, WERROR_GETCODE(err));
 	
 	} else {
 		GPtrArray *pList = g_ptr_array_new_with_free_func(g_free);
@@ -294,7 +296,7 @@ TEST (RS485_portsDB_testingSuite, dbCheckForContent) {
 
 				// Checking for used ports
 				err = usedPorts_portsDB(pList);
-				ASSERT_EQ (err, RS485EMULE_SUCCESS);
+				ASSERT_TRUE (WERROR_ISSUCCESS(err));
 			
 				if (fileArgumentsDb_get("verbose", NULL)) {
 					printf("List of used ports:\n");
@@ -322,11 +324,11 @@ TEST (RS485_portsDB_testingSuite, pidChk_portsDB) {
 	//	 3) It tests the usedPorts_portsDB() function
 	//	 4) It checks for the list size
 	//
-	RS485emErrorCodes_t err = RS485EMULE_SUCCESS;
+	WERROR_DECLARATION(err, WERROR_JUSTCODE, RS485EMULE_SUCCESS);
 
 	init_portsDB();
 	
-	if (_fillDB(TESTNUMPORTS, PREFIX) != RS485EMULE_SUCCESS) {
+	if ((err = _fillDB(TESTNUMPORTS, PREFIX)), WERROR_ISERROR(err)) {
 		// ERROR!
 		printf("ERROR(%d)! Test skipped for internal errors\n", __LINE__);
 
@@ -335,7 +337,7 @@ TEST (RS485_portsDB_testingSuite, pidChk_portsDB) {
 		_setFooPortAsUsed(2, getpid()) == false
 	) {
 		// ERROR!
-		printf("ERROR! I cannot marks the required ports as used ones\n");
+		printf("ERROR! I cannot marks the required ports as a used ones\n");
 
 	} else {
 		GPtrArray *pList = g_ptr_array_new_with_free_func(g_free);
@@ -349,14 +351,17 @@ TEST (RS485_portsDB_testingSuite, pidChk_portsDB) {
 			err = pidChk_portsDB(port);
 			
 			if (fileArgumentsDb_get("verbose", NULL)) {
-				if (err == RS485EMULE_SUCCESS)
+				if (WERROR_GETCODE(err) == RS485EMULE_SUCCESS)
 					printf("%s released\n", port);
 
-				else if (err == RS485EMULE_WARNING_UNAVAILRES)
+				else if (WERROR_GETCODE(err) == RS485EMULE_WARNING_UNAVAILRES)
 					printf("%s still in-use\n", port);
 
-				else
+				else if (WERROR_GETCODE(err) == RS485EMULE_WARNING_NOTHINGTODO)
 					printf("%s is not in-use\n", port);
+				
+				else
+					printf("ERROR! Unexpected returned value by pidChk_portsDB(%s) call\n", port);
 			}
 			t++;
 		}
@@ -365,7 +370,7 @@ TEST (RS485_portsDB_testingSuite, pidChk_portsDB) {
 		g_ptr_array_set_size(pList, 0);
 
 		err = usedPorts_portsDB(pList);
-		ASSERT_EQ (err, RS485EMULE_SUCCESS);
+		ASSERT_TRUE (WERROR_ISSUCCESS(err));
 		
 		if (fileArgumentsDb_get("verbose", NULL)) {
 			printf("List of used ports:\n");

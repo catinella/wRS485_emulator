@@ -40,7 +40,7 @@ ifeq ($(ARCH), arm)
 	CPP      = $(BHOST)/bin/arm-none-linux-gnueabihf-g++
 	CC       = $(BHOST)/bin/arm-none-linux-gnueabihf-gcc
 	SLIBPATH = -L$(BHOST)/usr/lib
-	INCLPATH = -I$(BHOST)/usr/include -I. $(shell pkg-config --cflags glib-2.0)
+	INCLPATH = -I$(BHOST)/usr/include -I. $(shell pkg-config --cflags glib-2.0) -I/usr/local/include/wError
 	CCLAB    = CC/ARM
 	DLIBPATH = $(BHOST)/usr/lib
 
@@ -48,7 +48,7 @@ else
 	CPP      = g++
 	CC       = gcc
 	SLIBPATH = -L/usr/lib/x86_64-linux-gnu -L/usr/local/lib/x86_64-linux-gnu
-	INCLPATH := -I/usr/include -I/usr/local/include -I. $(shell pkg-config --cflags glib-2.0)
+	INCLPATH := -I/usr/include -I/usr/local/include -I. $(shell pkg-config --cflags glib-2.0) -I/usr/local/include/wError
 	CCLAB    = CC/X86
 	DLIBPATH = /usr/local/lib/x86_64-linux-gnu
 endif
@@ -162,7 +162,7 @@ fakeMaster%.o:		fakeMaster%.c
 
 utest_RS485_virtualPort:	utest_RS485_virtualPort.o RS485_virtualPort.o RS485_commonLib.o RS485_portsDB.o libForTests.o
 					@echo "[LD C3] $@"
-					@$(CC) -Wall -o $@ $^ -lm -lMinuteC -lsqlite3 $(shell pkg-config --static --libs glib-2.0)
+					@$(CC) -Wall -o $@ $^ -lm -lMinuteC -lsqlite3 $(shell pkg-config --static --libs glib-2.0) -lwError
 
 ifeq ($(NOMODBUS), 1)
 fakeSerialDev3:		
@@ -172,17 +172,17 @@ endif
 
 fakeMaster%:		fakeMaster%.o libForTests.o
 				@echo "[LD 1] $@"
-				$(CC) -Wall -o $@ $^ -lm $(PRJLIB_L) $(shell pkg-config --static --libs glib-2.0)
+				@$(CC) -Wall -o $@ $^ -lm $(PRJLIB_L) $(shell pkg-config --static --libs glib-2.0) -lwError
 
 
 fakeSerialDev%:		fakeSerialDev%.o libForTests.o 
 				@echo "[LD 2] $@"
-				$(CC) -Wall -o $@ $^ -lm $(mbLinkOpt) $(PRJLIB_L) $(shell pkg-config --static --libs glib-2.0)
+				@$(CC) -Wall -o $@ $^ -lm $(mbLinkOpt) $(PRJLIB_L) $(shell pkg-config --static --libs glib-2.0) -lwError
 
 
 utest_%:			utest_%.o libForTests.o %.o RS485_commonLib.o
 				@echo "[LD 4] $@"
-				@$(CC) -Wall -o $@ $^ -lm -lMinuteC -lsqlite3 $(shell pkg-config --static --libs glib-2.0)
+				@$(CC) -Wall -o $@ $^ -lm -lMinuteC -lsqlite3 $(shell pkg-config --static --libs glib-2.0) -lwError
 
 
 utest_%:			utest_%.o libForTests.o RS485_commonLib.o

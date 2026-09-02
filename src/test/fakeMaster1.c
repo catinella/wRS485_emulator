@@ -84,11 +84,11 @@ void fooData(char *data, uint16_t size) {
 //                                                         M A I N 
 //------------------------------------------------------------------------------------------------------------------------------
 int main(int argc, char *argv[]) {
-	rs485emule_portsNum_type err       = RS485EMULE_SUCCESS;
-	uint16_t                 execTime  = FMASTER_TIME;
-	uint16_t                 loopSleep = FMASTER_LOOPSLEEP;
-	int                      sfd       = 0;
-	char                     sport[PATH_MAX];
+	uint16_t execTime  = FMASTER_TIME;
+	uint16_t loopSleep = FMASTER_LOOPSLEEP;
+	int      sfd       = 0;
+	char     sport[PATH_MAX];
+	WERROR_DECLARATION(err, WERROR_JUSTCODE, RS485EMULE_SUCCESS);
 
 	
 	//
@@ -124,10 +124,10 @@ int main(int argc, char *argv[]) {
 	//
 	//  Database initialization
 	//
-	if ((err = init_RS485emulatorAPI()) && err != RS485EMULE_SUCCESS) {
+	if ((err = init_RS485emulatorAPI()), WERROR_ISERROR(err)) {
 		// ERROR!
 		fprintf(stderr, "ERROR! I cannot open the virtual ports DB\n");
-		exit(err);
+		exit(wError_shellCode(err));
 	}
 	
 				
@@ -135,15 +135,15 @@ int main(int argc, char *argv[]) {
 	// Serial port file name acknowledge
 	//
 	err = getMPort_RS485emulatorAPI(sport);
-	if (err == RS485EMULE_WARNING_NOTHINGTODO) {
+	if (WERROR_GETCODE(err) == RS485EMULE_WARNING_NOTHINGTODO) {
 		fprintf(stderr, "[ERROR!] BUG in RS485emulatorAPI module\n");
 		exit(RS485EMULE_ERROR_INTERNAL);
 		
-	} else if (err == RS485EMULE_ERROR_FORBIDDENOP) {
+	} else if (WERROR_GETCODE(err) == RS485EMULE_ERROR_FORBIDDENOP) {
 		fprintf(stderr, "[ERROR!] The Device Master's port is already in use\n");
-		exit(err);
+		exit(WERROR_GETCODE(err));
 		
-	} else if (err != RS485EMULE_SUCCESS) {
+	} else if (WERROR_ISERROR(err)) {
 		fprintf(stderr, "[ERROR!] I cannot retrive the RS485 emulator's port\n");
 		exit(RS485EMULE_ERROR_IOFAILED);
 	}
@@ -188,8 +188,8 @@ int main(int argc, char *argv[]) {
 	}
 	
 	err = release_RS485emulatorAPI(sport);
-	if (err > 64) fprintf(stderr, "[ERROR!] I cannot relese the used port\n");
+	if (WERROR_ISERROR(err)) fprintf(stderr, "[ERROR!] I cannot relese the used port\n");
 	close_RS485emulatorAPI();
 	
-	return(RS485emu_bashErrorCode(err));
+	return(wError_shellCode(err));
 }

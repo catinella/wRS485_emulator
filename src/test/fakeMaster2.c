@@ -130,14 +130,14 @@ int getIndexByID (uint8_t *list, uint8_t id) {
 //                                                         M A I N 
 //------------------------------------------------------------------------------------------------------------------------------
 int main(int argc, char *argv[]) {
-	RS485emErrorCodes_t err       = RS485EMULE_SUCCESS;
-	uint16_t          loopSleep = FMASTER_LOOPSLEEP;
-	int               sfd       = 0;
-	char              sport[PATH_MAX];
-	char              idsStr[256];
-	uint8_t           idsList[16];
-	uint8_t           valuesList[16];
-	uint8_t           idsListSize = 0;
+	uint16_t  loopSleep = FMASTER_LOOPSLEEP;
+	int       sfd       = 0;
+	char      sport[PATH_MAX];
+	char      idsStr[256];
+	uint8_t   idsList[16];
+	uint8_t   valuesList[16];
+	uint8_t   idsListSize = 0;
+	WERROR_DECLARATION(err, WERROR_JUSTCODE, RS485EMULE_SUCCESS);
 
 	memset(idsList,    0,    16);
 	memset(valuesList, 0,    16);
@@ -186,10 +186,10 @@ int main(int argc, char *argv[]) {
 	//
 	//  Database initialization
 	//
-	if ((err = init_RS485emulatorAPI()) && err != RS485EMULE_SUCCESS) {
+	if ((err = init_RS485emulatorAPI()), WERROR_ISERROR(err)) {
 		// ERROR!
 		fprintf(stderr, "ERROR! I cannot open the virtual ports DB\n");
-		exit(err);
+		exit(wError_shellCode(err));
 	}
 	
 	// UNIX Signals
@@ -199,21 +199,21 @@ int main(int argc, char *argv[]) {
 				
 	// Serial port file name acknowledge
 	err = getMPort_RS485emulatorAPI(sport);
-	if (err == RS485EMULE_WARNING_NOTHINGTODO) {
+	if (WERROR_GETCODE(err) == RS485EMULE_WARNING_NOTHINGTODO) {
 		fprintf(stderr, "[ERROR!] BUG in RS485emulatorAPI module\n");
-		err = RS485EMULE_ERROR_INTERNAL;
+		WERROR_GETCODE(err) = RS485EMULE_ERROR_INTERNAL;
 		
-	} else if (err == RS485EMULE_ERROR_FORBIDDENOP) {
+	} else if (WERROR_GETCODE(err) == RS485EMULE_ERROR_FORBIDDENOP) {
 		fprintf(stderr, "[ERROR!] The Device Master's port is already in use\n");
 		
-	} else if (err != RS485EMULE_SUCCESS) {
+	} else if (WERROR_ISERROR(err)) {
 		fprintf(stderr, "[ERROR!] I cannot retrive the RS485 emulator's port\n");
 
 	// Serial port opening
 	} else if ((sfd = open(sport, O_RDWR|O_NOCTTY)) && sfd < 0) {
 		// ERROR!
 		fprintf(stderr, "[ERROR!] I cannot open the \"%s\" serial port\n", sport);
-		err = RS485EMULE_ERROR_IOFAILED;
+		WERROR_GETCODE(err) = RS485EMULE_ERROR_IOFAILED;
 
 	} else {
 		uint8_t         datapkg[2];
@@ -241,7 +241,8 @@ int main(int argc, char *argv[]) {
 			if (write(sfd, datapkg, 2) != 2) {
 				// ERROR!
 				fprintf(stderr, "[ERROR!] Data sending operation failed: %s\n", strerror(errno));
-				err = RS485EMULE_ERROR_IOFAILED;
+				WERROR_GETCODE(err) = RS485EMULE_ERROR_IOFAILED;
+				
 			} else {
 				//printf("Data-packages has been sent\n");
 
@@ -250,7 +251,7 @@ int main(int argc, char *argv[]) {
 				if (ret < 0 && errno != EINTR) {
 					// ERROR!
 					fprintf(stderr, "ERROR! ppoll() failed: %s\n", strerror(errno));
-					err = RS485EMULE_ERROR_IOFAILED;
+					WERROR_GETCODE(err) = RS485EMULE_ERROR_IOFAILED;
 					break;
 				
 				} else if (ret == 0) {
@@ -284,9 +285,11 @@ int main(int argc, char *argv[]) {
 
 	if (*sport != '\0') {
 		err = release_RS485emulatorAPI(sport);
-		if (err > 64) fprintf(stderr, "[ERROR!] I cannot relese the used port\n");
+		if (WERROR_ISERROR(err))
+			// ERROR!
+			fprintf(stderr, "[ERROR!] I cannot relese the used port\n");
 	}
 	close_RS485emulatorAPI();
 
-	return(RS485emu_bashErrorCode(err));
+	return(wError_shellCode(err));
 }

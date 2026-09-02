@@ -43,12 +43,14 @@
 TEST (RS485_commonLib_testingSuite, checkForProcStatusTest) {
 	char  status;
 	pid_t pid;
+	WERROR_DECLARATION(err, WERROR_JUSTCODE, RS485EMULE_SUCCESS) 
 
 	//
 	// Check for running process
 	//
-	ASSERT_EQ (RS485emu_checkForProcStatus(getpid(), &status), RS485EMULE_SUCCESS);
-	ASSERT_EQ (toupper(status), 'R');
+	err = RS485emu_checkForProcStatus(getpid(), &status);
+	ASSERT_TRUE (WERROR_ISSUCCESS(err));
+	ASSERT_EQ   (toupper(status), 'R');
 
 	pid = fork();
 	if (pid < 0) {
@@ -63,7 +65,8 @@ TEST (RS485_commonLib_testingSuite, checkForProcStatusTest) {
 	//
 	// Check for zombie process
 	//
-	ASSERT_EQ (RS485emu_checkForProcStatus(pid, &status), RS485EMULE_SUCCESS);
+	err = RS485emu_checkForProcStatus(pid, &status);
+	ASSERT_TRUE (WERROR_ISSUCCESS(err));
 	ASSERT_EQ (toupper(status), 'Z');
 
 	wait(NULL);
@@ -72,7 +75,8 @@ TEST (RS485_commonLib_testingSuite, checkForProcStatusTest) {
 	//
 	// Check for dead process
 	//
-	ASSERT_EQ (RS485emu_checkForProcStatus(pid, &status), RS485EMULE_SUCCESS);
+	err = RS485emu_checkForProcStatus(pid, &status);
+	ASSERT_TRUE (WERROR_ISSUCCESS(err));
 	ASSERT_EQ (toupper(status), 'X');
 	
 	return;
@@ -80,10 +84,15 @@ TEST (RS485_commonLib_testingSuite, checkForProcStatusTest) {
 
 TEST (RS485_commonLib_testingSuite, pidfileTest) {
 	pid_t pid;
+	WERROR_DECLARATION(err, WERROR_JUSTCODE, RS485EMULE_SUCCESS) 
 	
 	unlink(PIDFILE);
-	ASSERT_EQ (RS485emu_writePidFile(FAKEPID, PIDFILE), RS485EMULE_SUCCESS); 
-	ASSERT_EQ (RS485emu_readPidFile(&pid, PIDFILE), RS485EMULE_SUCCESS); 
+	err = RS485emu_writePidFile(FAKEPID, PIDFILE);
+	ASSERT_TRUE (WERROR_ISSUCCESS(err));
+
+	err = RS485emu_readPidFile(&pid, PIDFILE);
+	ASSERT_TRUE (WERROR_ISSUCCESS(err));
+	
 	ASSERT_EQ (pid, FAKEPID);
 
 	return;

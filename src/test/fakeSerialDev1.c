@@ -83,10 +83,10 @@ double getTimeStamp() {
 //                                                         M A I N 
 //------------------------------------------------------------------------------------------------------------------------------
 int main(int argc, char *argv[]) {
-	int               c = 0;
-	char              file[PATH_MAX];
-	int               option_index = 0;
-	RS485emErrorCodes_t err = RS485EMULE_SUCCESS;
+	int  c = 0;
+	char file[PATH_MAX];
+	int  option_index = 0;
+	WERROR_DECLARATION(err, WERROR_JUSTCODE, RS485EMULE_SUCCESS);
 
 	DBGTRACE
 	file[0] = '\0';
@@ -119,18 +119,18 @@ int main(int argc, char *argv[]) {
 			signal(SIGTERM, sigHandler);
 			signal(SIGINT,  sigHandler);
 			
-			if ((err = init_RS485emulatorAPI()) && err != RS485EMULE_SUCCESS) {
+			if ((err = init_RS485emulatorAPI()), WERROR_ISERROR(err)) {
 				// ERROR!
 				fprintf(stderr, "ERROR! I cannot open the virtual ports DB\n");
 				
-			} else if ((err = takePort_RS485emulatorAPI(myport)) && err != RS485EMULE_SUCCESS) {
+			} else if ((err = takePort_RS485emulatorAPI(myport)), WERROR_ISERROR(err)) {
 				// ERROR!
 				fprintf(stderr, "ERROR! I cannot retrive the port I have to use\n");
 
 			} else if ((sfd = open(myport, O_RDWR|O_NOCTTY)) && sfd < 0) {
 				// ERROR!
 				fprintf(stderr, "ERROR! I cannot open the \"%s\" serial port\n", myport);
-				err = RS485EMULE_ERROR_IOFAILED;
+				WERROR_GETCODE(err) = RS485EMULE_ERROR_IOFAILED;
 	
 			} else {
 				char            data[1024];
@@ -149,13 +149,13 @@ int main(int argc, char *argv[]) {
 				printf("%s is ready to log data from %s (fd=%d)\n", argv[0], myport, sfd);
 				fprintf(fh, "%s (pid=%d)\n", argv[0], getpid());
 			
-				while (loop && err < 64) {
+				while (loop && WERROR_ISERROR(err) == false) {
 					ret = ppoll(fds, 2, &pollTimeout, NULL);
 
 					if (ret < 0 && errno != EINTR) {
 						// ERROR!
 						fprintf(stderr, "ppoll() failed: %s\n", strerror(errno));
-						err = RS485EMULE_ERROR_IOFAILED;
+						WERROR_GETCODE(err) = RS485EMULE_ERROR_IOFAILED;
 					
 					} else if (ret == 0) {
 						// TIMEOUT
@@ -172,14 +172,14 @@ int main(int argc, char *argv[]) {
 								stderr, "ERROR! I cannot read data from \"%s\" serial port: %s\n",
 								myport, strerror(errno)
 							);
-							err = RS485EMULE_ERROR_IOFAILED;
+							WERROR_GETCODE(err) = RS485EMULE_ERROR_IOFAILED;
 						}
 					}
 				}
 
 				printf("Shouting down peocedure....\n");
 				
-				if ((err = release_RS485emulatorAPI(myport)) && err != RS485EMULE_SUCCESS)
+				if ((err = release_RS485emulatorAPI(myport)), WERROR_ISERROR(err)) 
 					// ERROR!
 					fprintf(stderr, "ERROR! I cannot release the port I used\n");
 					
@@ -194,6 +194,6 @@ int main(int argc, char *argv[]) {
 		exit(RS485EMULE_ERROR_ILLEGALSYNTAX);
 	}
 
-	exit(RS485emu_bashErrorCode(err));
+	exit(wError_shellCode(err));
 }	
 

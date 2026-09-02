@@ -37,8 +37,8 @@
 #define TEST_MESSAGE "BLA BLA BLA.... 138746824628428347284628 BLA BLA BLA...."
 
 struct qRetData {
-	GPtrArray         *list;
-	RS485emErrorCodes_t err;
+	GPtrArray *list;
+	wError_t  err;
 };
 
 static int _myCB (void *psl, int count, char **data, char **columns) {
@@ -59,7 +59,7 @@ static int _myCB (void *psl, int count, char **data, char **columns) {
 		
 		if (strcmp(columns[0], "devPort") != 0) {
 			// ERROR! (You should never get this error)
-			qrd->err = RS485EMULE_ERROR_INTERNAL;
+			WERROR_GETCODE(qrd->err) = RS485EMULE_ERROR_INTERNAL;
 		} else {
 			g_ptr_array_add(qrd->list, (gpointer)strdup(data[0]));
 			//DBGTRACE
@@ -72,13 +72,13 @@ static int _myCB (void *psl, int count, char **data, char **columns) {
 //                                      T E S T I N G   P R O C E D U R E S
 //------------------------------------------------------------------------------------------------------------------------------
 TEST (RS485_virtualPort_testingSuite, newPortCreation) {
-	virtualPort_t      newport;
-	RS485emErrorCodes_t  err = RS485EMULE_SUCCESS;
-
+	virtualPort_t newport;
+	WERROR_DECLARATION(err, WERROR_JUSTCODE, RS485EMULE_SUCCESS);
+	
 	init_virtualPort(&newport);
 
 	err = create_virtualPort(&newport, RS485EMULE_PORTSLAVE);
-	ASSERT_EQ (err, RS485EMULE_SUCCESS);
+	ASSERT_TRUE (WERROR_ISSUCCESS(err));
 
 	{
 		FILE  *fh = NULL;
@@ -102,7 +102,7 @@ TEST (RS485_virtualPort_testingSuite, newPortCreation) {
 			);
 
 		} else {
-			GPtrArray    *pidsList = g_ptr_array_new_with_free_func(g_free);
+			GPtrArray *pidsList = g_ptr_array_new_with_free_func(g_free);
 				
 			//
 			// Because the test has created one port, this process should have a single child-process where socat
@@ -168,12 +168,12 @@ TEST (RS485_virtualPort_testingSuite, newPortCreation) {
 
 
 TEST (RS485_virtualPort_testingSuite, dataExchange) {
-	virtualPort_t        newport;
-	RS485emErrorCodes_t  err = RS485EMULE_SUCCESS;
+	virtualPort_t newport;
+	WERROR_DECLARATION(err, WERROR_JUSTCODE, RS485EMULE_SUCCESS);
 
 	init_virtualPort(&newport);
 	
-	if ((err = create_virtualPort(&newport, RS485EMULE_PORTSLAVE)) == RS485EMULE_SUCCESS) {
+	if ((err = create_virtualPort(&newport, RS485EMULE_PORTSLAVE)), WERROR_ISSUCCESS(err)) {
 		sqlite3 *portsDB = NULL;
 		char    *sqliteErrMsg = NULL;
 		int     rc;
@@ -185,7 +185,7 @@ TEST (RS485_virtualPort_testingSuite, dataExchange) {
 		else {
 			struct qRetData qrd;
 			char   sqlStatement[8192];
-			qrd.err =  RS485EMULE_SUCCESS;
+			WERROR_GETCODE(qrd.err) =  RS485EMULE_SUCCESS;
 			qrd.list = g_ptr_array_new_with_free_func(g_free);
 
 			//
@@ -196,9 +196,9 @@ TEST (RS485_virtualPort_testingSuite, dataExchange) {
 				// ERROR!
 				printf ("ERROR(%d)! Test procedure intermnally failed (retcode=%d): %s\n", __LINE__, rc, sqliteErrMsg);
 	
-			else if (qrd.err != RS485EMULE_SUCCESS)
+			else if (WERROR_ISERROR(qrd.err))
 				// ERROR!
-				printf ("ERROR(%d)! Test procedure intermnally failed (retcode=%d)\n", __LINE__, qrd.err);
+				printf ("ERROR(%d)! Test procedure intermnally failed (retcode=%d)\n", __LINE__, WERROR_GETCODE(qrd.err));
 			
 			else if (qrd.list->len != 1)
 				// ERROR! (The SQLite DB should have just only one record)
@@ -251,10 +251,10 @@ TEST (RS485_virtualPort_testingSuite, dataExchange) {
 						char reply[1024];
 						
 						err = open_virtualPort(&newport);
-						ASSERT_EQ (err, RS485EMULE_SUCCESS);
+						ASSERT_TRUE (WERROR_ISSUCCESS(err));
 						
 						err = recv_virtualPort(newport, reply, messageSize);
-						ASSERT_EQ (err, RS485EMULE_SUCCESS);
+						ASSERT_TRUE (WERROR_ISSUCCESS(err));
 
 						ASSERT_EQ (0, strcmp(TEST_MESSAGE, reply));
 					}
