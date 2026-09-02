@@ -178,9 +178,12 @@ void close_portsDB() {
 	// Description:
 	//	This function closes the internal SQLite DB
 	//
+	int rc = 0;
 	if (portsDB != NULL) {
-		sqlite3_close(portsDB);
+		rc = sqlite3_close(portsDB);
+		//printf("sqlite3_close() = %d (%s)\n", rc, sqlite3_errstr(rc));
 		unlink(RS485_PORTSDBFILE);
+		portsDB = NULL;
 	}
 	return;
 }
@@ -197,14 +200,21 @@ wError_t push_portsDB(const char* busport, const char* devport, virtualPortRole_
 	//	RS485EMULE_ERROR_INTERNAL
 	//
 	char sqlStatement[256];
+	char *sqliteErrMsg = NULL;
 	char roleChar = 'S';
+	int  rc = 0;
 	WERROR_DECLARATION(err, WERROR_JUSTCODE, RS485EMULE_SUCCESS);
 	
 	if (role == RS485EMULE_PORTMASTER) roleChar = 'M';
 	sprintf(sqlStatement, "INSERT INTO portsDB VALUES(\"%c\", \"%s\", \"%s\", 0);", roleChar, busport, devport);
-	if (sqlite3_exec(portsDB, sqlStatement, NULL, NULL, NULL) != SQLITE_OK) 
+	rc = sqlite3_exec(portsDB, sqlStatement, NULL, NULL, &sqliteErrMsg);
+	if (rc != SQLITE_OK) {
 		// ERROR!
 		WERROR_GETCODE(err) = RS485EMULE_ERROR_INTERNAL;
+		//printf("SQL-ERROR(%d)! %s\n", rc, (sqliteErrMsg == NULL) ? sqlite3_errstr(rc) : sqliteErrMsg);
+	}
+	
+	if (sqliteErrMsg != NULL) sqlite3_free(sqliteErrMsg);
 
 	return(err);
 }
@@ -289,6 +299,8 @@ wError_t pidChk_portsDB(const char *port) {
 		// No process to check for
 		WERROR_GETCODE(err) = RS485EMULE_WARNING_NOTHINGTODO;
 			
+	if (sqliteErrMsg != NULL) sqlite3_free(sqliteErrMsg);
+
 	return(err);
 }
 
