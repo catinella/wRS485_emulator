@@ -63,12 +63,12 @@ For further information on this tool, please, read the [winstall project's page]
 [CHANGES](Changes.md)
 
 ## 5.0 Licence:
-This project is a free software; you can redistribute it and/or modify it under the terms	of the GNU General Public License
-as published by the Free Software Foundation; either version 3.0 of the License, or (at your option) any later version. 
+This project is free software, released under the terms of the **GNU Lesser General Public License, version 3 (LGPL-3.0)**.
 
-For further details please read the full [GPL3 text file](LICENSE.md).
-You should find a copy of the GNU General Public License document in the root folder of the project; if not, write to the 
+You are free to use, modify, and redistribute this software in accordance with the terms of the license, including its use
+as part of proprietary software, provided that the LGPL-licensed components and any modifications to them remain compliant
+with the LGPL-3.0 requirements.
 
-	Free Software Foundation, Inc.,
-	59 Temple Place, Suite 330,
-	Boston, MA  02111-1307  USA
+For the complete license terms, please refer to the [LICENSE-LGPL3.md](LICENSE-LGPL3.md) file included with this project.
+
+Copyright © Silvano Catinella
