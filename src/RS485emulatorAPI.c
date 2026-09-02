@@ -97,7 +97,7 @@ static int _getPortStatusCB (void *err_a, int count, char **data, char **columns
 	}
 	
 
-	if (err_a == NULL)
+	if (err_a != NULL)
 		memcpy(err_a, &err, sizeof(err));
 
 	return(0);
