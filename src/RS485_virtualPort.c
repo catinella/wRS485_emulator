@@ -101,14 +101,9 @@ static void _init_FilesList (filesList_t *files) {
 	// Description:
 	//	Structure initialization
 	//
-	uint16_t t;
-	if (initFlag == false) {
-		init_portsDB();
-		initFlag = true;
-	}
-	for (t=0; t<RS485_FILESMAX; t++) {
+	for (uint16_t t=0; t<RS485_FILESMAX; t++) 
 		files->list[t] = NULL;
-	}
+	
 	return;
 }
 
@@ -220,6 +215,10 @@ void init_virtualPort (virtualPort_t *item) {
 	// Description:
 	//	It ititializes the argument defined struct
 	//
+	if (initFlag == false) {
+		init_portsDB();
+		initFlag = true;
+	}
 	item->pid = 0;
 	item->fd  = -1;
 	memset((void*)item->port, 0, (PATH_MAX * sizeof(char)));
