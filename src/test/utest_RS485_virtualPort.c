@@ -67,6 +67,7 @@ static int _myCB (void *psl, int count, char **data, char **columns) {
 	}
 	return(0);
 }
+	
 
 //------------------------------------------------------------------------------------------------------------------------------
 //                                      T E S T I N G   P R O C E D U R E S
@@ -265,6 +266,8 @@ TEST (RS485_virtualPort_testingSuite, dataExchange) {
 			
 			g_ptr_array_free(qrd.list, TRUE);
 		}
+
+		if (sqliteErrMsg != NULL) sqlite3_free(sqliteErrMsg);
 	}
 	
 	free_virtualPort(&newport);
