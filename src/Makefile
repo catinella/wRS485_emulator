@@ -34,28 +34,8 @@
 #-------------------------------------------------------------------------------------------------------------------------------
 MAKEFLAGS += --no-builtin-rules
 
-ARCH    ?= x86
-
-ifeq ($(ARCH), arm)
-	CPP      = $(BHOST)/bin/arm-none-linux-gnueabihf-g++
-	CC       = $(BHOST)/bin/arm-none-linux-gnueabihf-gcc
-	SLIBPATH = -L$(BHOST)/usr/lib
-	INCLPATH := -I$(BHOST)/usr/include  -I/usr/local/include -I. \
-	            $(shell pkg-config --cflags glib-2.0)            \
-	            $(shell pkg-config --cflags wError)
-	CCLAB    = CC/ARM
-	DLIBPATH = $(BHOST)/usr/lib
-
-else
-	CPP      = g++
-	CC       = gcc
-	SLIBPATH = -L/usr/lib/x86_64-linux-gnu -L/usr/local/lib/x86_64-linux-gnu
-	INCLPATH := -I/usr/include -I/usr/local/include -I. \
-	            $(shell pkg-config --cflags glib-2.0)   \
-	            $(shell pkg-config --cflags wError)
-	CCLAB    = CC/X86
-	DLIBPATH = /usr/local/lib/x86_64-linux-gnu
-endif
+CPP      = g++
+CC       = gcc
 
 prjComponents     = RS485_emulator libRS485emulatorAPI.so RS485_updateSignal 
 
@@ -87,6 +67,17 @@ SYMBOLS =                                       \
 	"-D__DEBUG__=$(DEBUG)"                    \
 	"-DGDB=$(GDB)"                        
 
+LIBS =                                    \
+	$(shell pkg-config --libs sqlite3)  \
+	$(shell pkg-config --libs glib-2.0) \
+	$(shell pkg-config --libs wError)
+
+INCLUDE  =                                    \
+	-I/usr/include -I/usr/local/include -I. \
+	$(shell pkg-config --cflags sqlite3)    \
+	$(shell pkg-config --cflags glib-2.0)   \
+	$(shell pkg-config --cflags wError)
+
 .PHONY: emulator clean test cleanall install uninstall help _help 
 
 #-------------------------------------------------------------------------------------------------------------------------------
@@ -95,16 +86,16 @@ SYMBOLS =                                       \
 all:				$(prjComponents)
 
 %.o:				%.c %.h 
-				@echo "[$(CCLAB)] $@"
-				@$(CC) $(GCCOPTS) -c $(INCLPATH) -o $@ $(SYMBOLS) $<
+				@echo "[ CC ] $@"
+				@$(CC) $(GCCOPTS) -c $(INCLUDE) -o $@ $(SYMBOLS) $<
 
 %-sh.o:			%.c %.h
-				@echo "[$(CCLAB)-SH] $@"
-				@$(CC) $(GCCOPTS) -Wall -Wextra -pedantic -fPIC -shared -c $(INCLPATH) -o $@ $(SYMBOLS) $<
+				@echo "[CC-SH] $@"
+				@$(CC) $(GCCOPTS) -Wall -Wextra -pedantic -fPIC -shared -c $(INCLUDE) -o $@ $(SYMBOLS) $<
 
 RS485_emulator:		RS485_emulator.o RS485_commonLib.o RS485_portsDB.o RS485_virtualPort.o RS485_virtualPortsList.o
 				@echo "[LD C1] $@"
-				@$(CC) -Wall -o $@ $^ -lsqlite3 $(shell pkg-config --libs glib-2.0) $(shell pkg-config --libs wError)
+				@$(CC) -Wall -o $@ $^ $(LIBS)
 	
 RS485_updateSignal:	RS485_updateSignal.o RS485_commonLib.o
 				@echo "[LD C4] $@"
