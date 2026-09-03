@@ -45,7 +45,7 @@
 // Used by the BUS emulator
 //
 wError_t init_portsDB      ();
-void     close_portsDB     ();
+wError_t close_portsDB     ();
 wError_t push_portsDB      (const char *busport, const char *devport, virtualPortRole_t role);
 wError_t usedPorts_portsDB (GPtrArray *portsList);
 void     print_portsDB     ();

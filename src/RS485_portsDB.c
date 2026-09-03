@@ -61,8 +61,11 @@
 #define DBGTRACE ;
 #endif
 
-#define SQLWERR(VAR, RC)            wErrorWithMessage_set(&VAR,   "SQLITE3(%d): %s", RC, sqlite3_errstr(RC));
-#define SQLWERR2(VAR_A, RC, VAR_B)	wErrorWithMessage_set(&VAR_A, "SQLITE3(%d): %s", RC, VAR_B);
+#define SQLWERR(VAR, RC)                                                                                                        \
+	wErrorWithMessage_set(&VAR, "SQLITE3(%d): %s", RC, sqlite3_errstr(RC));
+	
+#define SQLWERR2(VAR_A, RC, VAR_B)                                                                                              \
+	wErrorWithMessage_set(&VAR_A, "SQLITE3(%d): %s", RC, (VAR_B == NULL) ? sqlite3_errstr(RC) : VAR_B);
 
 struct queryRetData {
 	GPtrArray *list;
@@ -178,7 +181,7 @@ wError_t init_portsDB() {
 }
 
 
-void close_portsDB() {
+wError_t close_portsDB() {
 	//
 	// Description:
 	//	This function closes the internal SQLite DB
@@ -191,7 +194,7 @@ void close_portsDB() {
 		unlink(RS485_PORTSDBFILE);
 		portsDB = NULL;
 	}
-	return;
+	return(err);
 }
 
 
