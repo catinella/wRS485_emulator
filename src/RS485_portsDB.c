@@ -61,6 +61,8 @@
 #define DBGTRACE ;
 #endif
 
+#define SQLWERR(VAR, RC)            wErrorWithMessage_set(&VAR,   "SQLITE3(%d): %s", RC, sqlite3_errstr(RC));
+#define SQLWERR2(VAR_A, RC, VAR_B)	wErrorWithMessage_set(&VAR_A, "SQLITE3(%d): %s", RC, VAR_B);
 
 struct queryRetData {
 	GPtrArray *list;
@@ -131,19 +133,21 @@ wError_t init_portsDB() {
 	//	RS485EMULE_ERROR_FORBIDDENOP    File permission changing forbidden (when I am running as root!!!!)
 	//
 	int rc = 0;
-	WERROR_DECLARATION(err, WERROR_JUSTCODE, RS485EMULE_SUCCESS);
+	WERROR_DECLARATION(err, WERROR_WITHMESSAGE, RS485EMULE_SUCCESS)
 	
 	unlink(RS485_PORTSDBFILE);
 	rc = sqlite3_open(RS485_PORTSDBFILE, &portsDB);
-	if (rc == SQLITE_IOERR || rc == SQLITE_PERM)
+	if (rc == SQLITE_IOERR || rc == SQLITE_PERM) {
 		// ERROR!
+		SQLWERR(err, rc)
 		WERROR_GETCODE(err) = RS485EMULE_ERROR_IOFAILED;
 		
-	else if (rc != SQLITE_OK)
+	} else if (rc != SQLITE_OK) {
 		// ERROR!
+		SQLWERR(err, rc)
 		WERROR_GETCODE(err) = RS485EMULE_ERROR_INTERNAL;
 		
-	else {
+	} else {
 		char *sqlStatement = "CREATE TABLE portsDB( \
 			\"role\"    TEXT,                     \
 			\"busPort\" TEXT NOT NULL UNIQUE,     \
@@ -154,6 +158,7 @@ wError_t init_portsDB() {
 		// SQL statement execution
 		if (sqlite3_exec(portsDB, sqlStatement, NULL, NULL, NULL) != SQLITE_OK) {
 			// ERROR!
+			SQLWERR(err, rc)
 			WERROR_GETCODE(err) = RS485EMULE_ERROR_INTERNAL;
 			sqlite3_close(portsDB);
 			portsDB = NULL;
@@ -179,9 +184,10 @@ void close_portsDB() {
 	//	This function closes the internal SQLite DB
 	//
 	int rc = 0;
+	WERROR_DECLARATION(err, WERROR_WITHMESSAGE, RS485EMULE_SUCCESS)
 	if (portsDB != NULL) {
 		rc = sqlite3_close(portsDB);
-		//printf("sqlite3_close() = %d (%s)\n", rc, sqlite3_errstr(rc));
+		SQLWERR(err, rc)
 		unlink(RS485_PORTSDBFILE);
 		portsDB = NULL;
 	}
@@ -203,15 +209,15 @@ wError_t push_portsDB(const char* busport, const char* devport, virtualPortRole_
 	char *sqliteErrMsg = NULL;
 	char roleChar = 'S';
 	int  rc = 0;
-	WERROR_DECLARATION(err, WERROR_JUSTCODE, RS485EMULE_SUCCESS);
+	WERROR_DECLARATION(err, WERROR_WITHMESSAGE, RS485EMULE_SUCCESS)
 	
 	if (role == RS485EMULE_PORTMASTER) roleChar = 'M';
 	sprintf(sqlStatement, "INSERT INTO portsDB VALUES(\"%c\", \"%s\", \"%s\", 0);", roleChar, busport, devport);
 	rc = sqlite3_exec(portsDB, sqlStatement, NULL, NULL, &sqliteErrMsg);
 	if (rc != SQLITE_OK) {
 		// ERROR!
+		SQLWERR2(err, rc, sqliteErrMsg)
 		WERROR_GETCODE(err) = RS485EMULE_ERROR_INTERNAL;
-		//printf("SQL-ERROR(%d)! %s\n", rc, (sqliteErrMsg == NULL) ? sqlite3_errstr(rc) : sqliteErrMsg);
 	}
 	
 	if (sqliteErrMsg != NULL) sqlite3_free(sqliteErrMsg);
@@ -234,17 +240,22 @@ wError_t usedPorts_portsDB (GPtrArray *portsList) {
 	char                *sqlStatement = "SELECT busPort FROM portsDB WHERE pid>0 and role=\"S\";";
 	int                 rc;
 	struct queryRetData qrd;
+	char                *sqliteErrMsg = NULL;
 
 	// Initialization...
 	qrd.list = portsList;
-	wError_init(&qrd.err, WERROR_JUSTCODE);
+	wError_init(&qrd.err, WERROR_WITHMESSAGE);
 	WERROR_GETCODE(qrd.err) = RS485EMULE_SUCCESS;
 	
-	rc = sqlite3_exec(portsDB, sqlStatement, _usedPorts_callback, (void*)&qrd, NULL);
-	if (rc != SQLITE_OK)
+	rc = sqlite3_exec(portsDB, sqlStatement, _usedPorts_callback, (void*)&qrd, &sqliteErrMsg);
+	if (rc != SQLITE_OK) {
 		// ERROR!
 		WERROR_GETCODE(qrd.err) = RS485EMULE_ERROR_INTERNAL;
+		SQLWERR2(qrd.err, rc, sqliteErrMsg)
+	}
 		
+	if (sqliteErrMsg != NULL) sqlite3_free(sqliteErrMsg);
+	
 	return(qrd.err);
 }
 
@@ -273,13 +284,14 @@ wError_t pidChk_portsDB(const char *port) {
 	char  sqlStatement[256];
 	pid_t pid;
 	char  *sqliteErrMsg = NULL;
-	WERROR_DECLARATION(err, WERROR_JUSTCODE, RS485EMULE_SUCCESS);
+	int   rc = 0;
+	WERROR_DECLARATION(err, WERROR_WITHMESSAGE, RS485EMULE_SUCCESS)
 	
 	sprintf(sqlStatement, "SELECT \"pid\" FROM portsDB WHERE busPort=\"%s\";", port);
-	if (sqlite3_exec(portsDB, sqlStatement, _pidByPort_callback, (void*)&pid, &sqliteErrMsg) != SQLITE_OK) {
+	if ((rc = sqlite3_exec(portsDB, sqlStatement, _pidByPort_callback, (void*)&pid, &sqliteErrMsg)) != SQLITE_OK) {
 		// ERROR!
 		WERROR_GETCODE(err) = RS485EMULE_ERROR_INTERNAL;
-		printf("%s(%d): ERROR! %s\n", __PRETTY_FUNCTION__, __LINE__, sqliteErrMsg);
+		SQLWERR2(err, rc, sqliteErrMsg)
 		
 	} else if (pid > 0) {
 		struct stat buff;
@@ -289,9 +301,11 @@ wError_t pidChk_portsDB(const char *port) {
 		if (stat(folder, &buff) < 0) {
 			// The port-owner process is no more running...
 			sprintf(sqlStatement, "UPDATE portsDB SET pid=0 WHERE busPort=\"%s\";", port);
-			if (sqlite3_exec(portsDB, sqlStatement, NULL, NULL, NULL) != SQLITE_OK)
+			if ((rc = sqlite3_exec(portsDB, sqlStatement, NULL, NULL, &sqliteErrMsg)) != SQLITE_OK) {
 				// ERROR!
+				SQLWERR2(err, rc, sqliteErrMsg)
 				WERROR_GETCODE(err) = RS485EMULE_ERROR_INTERNAL;
+			}
 		} else
 			// WARNING! the process is running
 			WERROR_GETCODE(err) = RS485EMULE_WARNING_UNAVAILRES;
