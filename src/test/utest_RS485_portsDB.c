@@ -38,6 +38,15 @@
 #define TESTNUMPORTS  16
 #define TESTUSEDPORTS 3
 
+#define WPRINTERR(VAR)                                   \
+	if (                                               \
+		fileArgumentsDb_get("verbose", NULL)      && \
+		WERROR_ISSUCCESS(VAR) == false            && \
+		WERROR_GETTYPE(VAR) == WERROR_WITHMESSAGE && \
+		(VAR).withMessage.message[0] != '\0'         \
+	)                                                  \
+		printf("%s\n", (VAR).withMessage.message);
+
 bool signalFlag = false;
 
 struct qRetData {
@@ -86,7 +95,7 @@ wError_t _fillDB(unsigned int noi, const char *prefix) {
 	//
 	char bport[PATH_MAX];
 	char dport[PATH_MAX];
-	WERROR_DECLARATION(err, WERROR_JUSTCODE, RS485EMULE_SUCCESS);
+	WERROR_DECLARATION(err, WERROR_WITHMESSAGE, RS485EMULE_SUCCESS);
 	
 	for (unsigned int t=0; t<noi; t++) {
 		sprintf(bport, "%s%d", prefix, (t*4));
@@ -231,6 +240,8 @@ bool _setFooPortAsUsed (uint8_t noi, unsigned int pid) {
 
 	return(out);
 }
+	
+
 //------------------------------------------------------------------------------------------------------------------------------
 //                                                    T E S T S
 //------------------------------------------------------------------------------------------------------------------------------
@@ -242,9 +253,11 @@ TEST (RS485_portsDB_testingSuite, dbCreation) {
 	WERROR_DECLARATION(err, WERROR_JUSTCODE, RS485EMULE_SUCCESS);
 	
 	err = init_portsDB();
+	WPRINTERR(err)
 	ASSERT_TRUE (WERROR_ISSUCCESS(err));
 	
 	err = _fillDB(TESTNUMPORTS, PREFIX);
+	WPRINTERR(err)
 	ASSERT_TRUE (WERROR_ISSUCCESS(err));
 
 	close_portsDB();
@@ -296,6 +309,7 @@ TEST (RS485_portsDB_testingSuite, dbCheckForContent) {
 
 				// Checking for used ports
 				err = usedPorts_portsDB(pList);
+				WPRINTERR(err)
 				ASSERT_TRUE (WERROR_ISSUCCESS(err));
 			
 				if (fileArgumentsDb_get("verbose", NULL)) {
@@ -309,7 +323,8 @@ TEST (RS485_portsDB_testingSuite, dbCheckForContent) {
 		g_ptr_array_free(pList, TRUE);
 	}
 	
-	close_portsDB();
+	err = close_portsDB();
+	WPRINTERR(err)
 	
 	return;
 }
@@ -360,8 +375,10 @@ TEST (RS485_portsDB_testingSuite, pidChk_portsDB) {
 				else if (WERROR_GETCODE(err) == RS485EMULE_WARNING_NOTHINGTODO)
 					printf("%s is not in-use\n", port);
 				
-				else
+				else {
 					printf("ERROR! Unexpected returned value by pidChk_portsDB(%s) call\n", port);
+					WPRINTERR(err)
+				}
 			}
 			t++;
 		}
