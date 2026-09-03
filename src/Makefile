@@ -17,16 +17,7 @@
 # Description:
 #	This file contains the set of rules you need to build the RS485 emulator software and its testing modules.
 #	
-#	Multiplatform:
-#	==============
-#	This is an emulator so you don't need to install it in your target industrial device, usually. But, in some case you
-#	could need it, for example to evaluate the performance lack between the emulator's environment and the real one. 
-#	In these cases, to compile the project for ARM targets you have to set the ARCH and BHOST symbols.
-#		Eg. make BHOST=../buildroot-fimer/output/host ARCH=arm
-#
 #	Settings:
-#		ARCH       {x86|arm}
-#		BHOST      Buildroot's host folder
 #		PREFIX     Set your customized path where you want to install the RS485 emulator
 #		TESTMODE   Set it to execute the unit tests as unprivileged user
 #		GDB        It enables the debugger support
