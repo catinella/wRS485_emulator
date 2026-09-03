@@ -34,28 +34,8 @@
 #-------------------------------------------------------------------------------------------------------------------------------
 MAKEFLAGS += -rR
 
-ARCH    ?= x86
-
-ifeq ($(ARCH), arm)
-	CPP      = $(BHOST)/bin/arm-none-linux-gnueabihf-g++
-	CC       = $(BHOST)/bin/arm-none-linux-gnueabihf-gcc
-	SLIBPATH = -L$(BHOST)/usr/lib
-	INCLPATH = -I$(BHOST)/usr/include -I.            \
-	           $(shell pkg-config --cflags glib-2.0) \
-	           $(shell pkg-config --cflags wError) 
-	CCLAB    = CC/ARM
-	DLIBPATH = $(BHOST)/usr/lib
-
-else
-	CPP      = g++
-	CC       = gcc
-	SLIBPATH = -L/usr/lib/x86_64-linux-gnu -L/usr/local/lib/x86_64-linux-gnu
-	INCLPATH := -I/usr/include -I/usr/local/include -I. \
-	           $(shell pkg-config --cflags glib-2.0) \
-	           $(shell pkg-config --cflags wError) 
-	CCLAB    = CC/X86
-	DLIBPATH = /usr/local/lib/x86_64-linux-gnu
-endif
+CPP      = g++
+CC       = gcc
 
 testSrcsList     := $(shell ls utest_*.c)
 testsList        := $(testSrcsList:%.c=%)
@@ -85,20 +65,32 @@ SYMBOLS = \
 	"-DGDB=$(GDB)"
 
 ifeq ($(GDB), 1)
-	gopt = -o0 -g
+gopt = -o0 -g
+.SECONDARY: $(testSrcsList:utest_%.c=utest_%__main.sgc)
 else
-	gopt = -o2 
+gopt = -o2 
 endif
 
 ifeq ($(NOMODBUS), 1)
-	mbLinkOpt =
+mbLinkOpt =
 else
-	mbLinkOpt = -lmodbus
+mbLinkOpt = -lmodbus
 endif
 
 GCCOPTS     = -Wall $(gopt) -std=c11 -D_XOPEN_SOURCE=600 -D_POSIX_C_SOURCE=200809L -D_DEFAULT_SOURCE
 PRJLIB_L    = -Wl,-rpath,../ -L../ -lRS485emulatorAPI
 MINUTE_SCG  = /usr/local/share/minute/minute_cCodeGenerator.py
+
+LIBS =                                    \
+	$(shell pkg-config --libs sqlite3)  \
+	$(shell pkg-config --libs glib-2.0) \
+	$(shell pkg-config --libs wError)
+
+INCLUDE :=                                    \
+	-I/usr/include -I/usr/local/include -I. \
+	$(shell pkg-config --cflags sqlite3)    \
+	$(shell pkg-config --cflags glib-2.0)   \
+	$(shell pkg-config --cflags wError) 
 
 .PHONY: emulator clean test cleanall install uninstall PRJ
 
@@ -126,13 +118,13 @@ PRJ:
 #-------------------------------------------------------------------------------------------------------------------------------
 
 test_%.o:			test_%.c ../%.c
-				@echo "[$(CCLAB) 1] $@"
-				@$(CC) $(GCCOPTS) -c $< $(INCLPATH) -I. -I../ "-DTESTMODE=$(TESTMODE)" -o $@ 
+				@echo "[ CC 1] $@"
+				@$(CC) $(GCCOPTS) -c $< $(INCLUDE) -I. -I../ "-DTESTMODE=$(TESTMODE)" -o $@ 
 			
 
 utest_%.o:			utest_%.c utest_%__main.sgc
-				@echo "[$(CCLAB) 2] $@"
-				@$(CC) $(GCCOPTS) -c $< $(INCLPATH) -I. -I../ "-DTESTMODE=$(TESTMODE)" -o $@ 
+				@echo "[ CC 2] $@"
+				@$(CC) $(GCCOPTS) -c $< $(INCLUDE) -I. -I../ "-DTESTMODE=$(TESTMODE)" -o $@ 
 
 
 utest_%__main.sgc:	utest_%.c
@@ -141,23 +133,23 @@ utest_%__main.sgc:	utest_%.c
 
 
 fakeSerialDev%.o:		fakeSerialDev%.c
-				@echo "[$(CCLAB) 3] $@"
-				@$(CC) $(GCCOPTS) -c $< $(INCLPATH) -I. -I../ "-DTESTMODE=$(TESTMODE)" -o $@
+				@echo "[ CC 3] $@"
+				@$(CC) $(GCCOPTS) -c $< $(INCLUDE) -I. -I../ "-DTESTMODE=$(TESTMODE)" -o $@
 
 
 libForTests.o:		libForTests.c
-				@echo "[$(CCLAB) C1] $@"
-				@$(CC) $(GCCOPTS) -c $< $(INCLPATH) -I. -I.. "-DTESTMODE=$(TESTMODE)" -o $@
+				@echo "[ CC C1] $@"
+				@$(CC) $(GCCOPTS) -c $< $(INCLUDE) -I. -I.. "-DTESTMODE=$(TESTMODE)" -o $@
 
 
 fakeMaster%.o:		fakeMaster%.c
-				@echo "[$(CCLAB) 4] $@"
-				@$(CC) $(GCCOPTS) -c $< $(INCLPATH) -I. -I../ "-DTESTMODE=$(TESTMODE)" -o $@
+				@echo "[ CC 4] $@"
+				@$(CC) $(GCCOPTS) -c $< $(INCLUDE) -I. -I../ "-DTESTMODE=$(TESTMODE)" -o $@
 
 
 %.o:				../%.c ../%.h
-				@echo "[$(CCLAB) 5] $@"
-				@$(CC) $(GCCOPTS) -c $< $(INCLPATH) -I. -I../ "-DTESTMODE=$(TESTMODE)" -o $@
+				@echo "[ CC 5] $@"
+				@$(CC) $(GCCOPTS) -c $< $(INCLUDE) -I. -I../ "-DTESTMODE=$(TESTMODE)" -o $@
 
 
 #-------------------------------------------------------------------------------------------------------------------------------
@@ -176,27 +168,19 @@ endif
 
 fakeMaster%:		fakeMaster%.o libForTests.o
 				@echo "[LD 1] $@"
-				@$(CC) -Wall -o $@ $^ -lm $(PRJLIB_L) \
-				$(shell pkg-config --libs glib-2.0)   \
-				$(shell pkg-config --libs wError)
+				@$(CC) -Wall -o $@ $^ -lm $(PRJLIB_L) $(LIBS)
 
 
 fakeSerialDev%:		fakeSerialDev%.o libForTests.o 
 				@echo "[LD 2] $@"
-				@$(CC) -Wall -o $@ $^ -lm $(mbLinkOpt) $(PRJLIB_L) \
-				$(shell pkg-config --libs glib-2.0) \
-				$(shell pkg-config --libs wError) 
+				@$(CC) -Wall -o $@ $^ -lm $(mbLinkOpt) $(PRJLIB_L) $(LIBS) 
 
 
 utest_%:			utest_%.o libForTests.o %.o RS485_commonLib.o
 				@echo "[LD 4] $@"
-				@$(CC) -Wall -o $@ $^ -lm -lMinuteC -lsqlite3 \
-				$(shell pkg-config --libs glib-2.0) \
-				$(shell pkg-config --libs wError) 
+				@$(CC) -Wall -o $@ $^ -lm -lMinuteC $(LIBS)
 
 
 utest_%:			utest_%.o libForTests.o RS485_commonLib.o
 				@echo "[LD 5] $@"
-				@$(CC) -Wall -o $@ $^ -lm -lMinuteC -lsqlite3
-
-
+				@$(CC) -Wall -o $@ $^ -lm -lMinuteC $(LIBS)
