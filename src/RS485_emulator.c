@@ -91,21 +91,30 @@ struct option myopts[] = {
 	 {0,            0,                 0, 0  }
 };
 
-bool loop          = true;
-bool configRequest = false;
-bool foreground    = false;
-
+bool loop           = true;
+bool configRequest  = false;
+bool foreground     = false;
+bool interruptedBus = false;
 //------------------------------------------------------------------------------------------------------------------------------
 //                                                  F U N C T I O N S 
 //------------------------------------------------------------------------------------------------------------------------------
+void wrpLogMsg (const char *message, uint8_t ec);
+
 
 void sigHandler (int signum) {
 	if      (signum == SIGTERM || signum == SIGINT) loop = false;
 	else if (signum == RS485EMULE_UPDATESIGN)       configRequest = true;
+	else if (signum == RS485EMULE_BROKENSIGN) {
+		if (interruptedBus == false) {
+			interruptedBus = true;
+			wrpLogMsg("RS485-BUS broken", RS485EMULE_SUCCESS);
+		} else {
+			interruptedBus = false;
+			wrpLogMsg("RS485-BUS fixed", RS485EMULE_SUCCESS);
+		}
 	
 	return;
 }
-
 
 void summary (const char *execfile) {
 	//
@@ -192,6 +201,7 @@ int main(int argc, char *argv[]) {
 	signal(SIGTERM,                sigHandler);
 	signal(SIGINT,                 sigHandler);
 	signal(RS485EMULE_UPDATESIGN,  sigHandler);
+	signal(RS485EMULE_BROKENSIGN,  sigHandler);
 
 	// Initialization
 	init_portsDB();
@@ -354,7 +364,7 @@ int main(int argc, char *argv[]) {
 						// ERROR!
 						wrpLogMsg("I cannot read data from the serial port", RS485EMULE_ERROR_IOFAILED);
 						
-					} else if (trs > 0) {
+					} else if (trs > 0 && interruptedBus == false) {
 						//
 						// Data writing to slave devices
 						//
@@ -377,8 +387,10 @@ int main(int argc, char *argv[]) {
 						if (fds[t].revents & POLLIN) {
 							// Slave to master data exchange
 							trs = read(fds[t].fd, chunk, RS485_PKGDATA_SIZE);
-							if (trs > 0)    err = send_virtualPort(masterPort, chunk, trs);
-							else            WERROR_GETCODE(err) = RS485EMULE_ERROR_IOFAILED;
+							if (trs > 0 && interruptedBus == false)
+								err = send_virtualPort(masterPort, chunk, trs);
+							else
+								WERROR_GETCODE(err) = RS485EMULE_ERROR_IOFAILED;
 						}
 					}
 				}
