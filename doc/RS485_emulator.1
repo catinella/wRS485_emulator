@@ -1,0 +1,47 @@
+.TH RS485_EMULATOR 1 "September 2026" "wRS485_emulator" "BUS emulator daemon"
+
+.SH NAME
+RS485_emulator - virtual RS485 bus emulator for development and testing
+
+.SH SYNOPSIS
+.B RS485_emulator 
+.RI "[--foreground]"
+.RI "[--help]"
+.RI "[--version]"
+
+.SH DESCRIPTION
+.B RS485_emulator
+creates a virtual RS485 bus that can be used to develop and test software
+without requiring a physical RS485 network.
+
+The emulator provides one virtual master port and a set of virtual slave
+ports. Applications connected to these ports can use them as normal serial
+devices.
+
+.SH OPTIONS
+.IP "--foreground"
+The process will run in foreground and the log messages will be printed on screen instead to be sent to syslog daemon
+
+.IP "--help"
+A usage message will be printed
+
+.IP "--version"
+The project's version will be printed
+
+.SH FILES
+
+.IP "/etc/RS485_emulator.cfg"
+The configuration file
+
+.IP "/var/run/RS485_emulator.pid"
+The pid-file when the process is running as daemon
+
+.IP "/var/lib/RS485_emulator.db"
+The SQLite3 db-file
+
+.SH SEE ALSO
+.BR RS485emulatorAPI (3)
+
+.SH AUTHOR
+Silvano Catinella
+
