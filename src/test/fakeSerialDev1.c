@@ -49,6 +49,7 @@
 
 struct option myopts[] = {
 	 {"repoFile", required_argument, 0, 'r'},
+	 {"verbose",  0,                 0, 'v'},
 	 {0, 0, 0, 0}
 };
 
@@ -65,7 +66,7 @@ void sigHandler (int signum) {
 }
 
 void summary (char *file) {
-	fprintf(stderr, "Use: %s --repoFile=<file name>\n", file);
+	fprintf(stderr, "Use: %s --repoFile=<file name> [--verbose]\n", file);
 	return;
 }
 
@@ -86,19 +87,22 @@ int main(int argc, char *argv[]) {
 	int  c = 0;
 	char file[PATH_MAX];
 	int  option_index = 0;
+	bool verbose = false;
 	WERROR_DECLARATION(err, WERROR_JUSTCODE, RS485EMULE_SUCCESS);
 
-	DBGTRACE
 	file[0] = '\0';
-	//for (c=0; c<argc; c++) printf("%d: %s\n", c, argv[c]);
 
 	if (argc > 1) {
 		c = 0;
 		while (c >= 0) {
-			c = getopt_long(argc, argv, "r:", myopts, &option_index);
+			c = getopt_long(argc, argv, "r:v", myopts, &option_index);
 			if (c > 0) {
 				if (c == 'r')
 					strcpy(file, optarg);
+
+				else if (c == 'v')
+					verbose = true;
+
 				else {
 					summary(argv[0]);
 					exit(RS485EMULE_ERROR_UNKNOWNARG);
@@ -106,6 +110,7 @@ int main(int argc, char *argv[]) {
 			}
 		}
 	} else {
+		// ERROR!
 		summary(argv[0]);
 		exit(RS485EMULE_ERROR_ILLEGALSYNTAX);
 	}
@@ -122,15 +127,21 @@ int main(int argc, char *argv[]) {
 			if ((err = init_RS485emulatorAPI()), WERROR_ISERROR(err)) {
 				// ERROR!
 				fprintf(stderr, "ERROR! I cannot open the virtual ports DB\n");
+				if (verbose && WERROR_GETTYPE(err) == WERROR_WITHMESSAGE)
+					fprintf(stderr, "%s\n", err.withMessage.message);
 				
 			} else if ((err = takePort_RS485emulatorAPI(myport)), WERROR_ISERROR(err)) {
 				// ERROR!
 				fprintf(stderr, "ERROR! I cannot retrive the port I have to use\n");
+				if (verbose && WERROR_GETTYPE(err) == WERROR_WITHMESSAGE)
+					fprintf(stderr, "%s\n", err.withMessage.message);
 
 			} else if ((sfd = open(myport, O_RDWR|O_NOCTTY)) && sfd < 0) {
 				// ERROR!
 				fprintf(stderr, "ERROR! I cannot open the \"%s\" serial port\n", myport);
 				WERROR_GETCODE(err) = RS485EMULE_ERROR_IOFAILED;
+				if (verbose)
+					fprintf(stderr, "%s\n", strerror(errno));
 	
 			} else {
 				char            data[1024];
