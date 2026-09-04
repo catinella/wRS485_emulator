@@ -33,7 +33,7 @@ function. It must be executed before using any other API functions.
 
 When the obtained virtual serial port is no longer required,
 .BR close_RS485emulatorAPI ()
-should be called to release the system resorces and close the channel to database.
+should be called to close the channel to database.
 
 .SH FUNCTIONS
 
@@ -52,11 +52,11 @@ It closes the database channel used by the RS485 emulator API. No error code is 
 .TP
 .BI "release_RS485emulatorAPI(const char *" serialport ")"
 It marks the argument defined virtual-port as an available one. It allows another process to use it.
-You have to close the open port's file-descriptor begore to use this API. This function returns one of the following values:
+You have to close the open port's file-descriptor before to use this API. This function returns one of the following values:
 .nf
-RS485EMULE_SUCCESS                OK, the porst is available now
+RS485EMULE_SUCCESS                OK, the port is available now
 RS485EMULE_WARNING_NOTHINGTODO    The port was already available
-RS485EMULE_ERROR_ITEMNOTFOUND     The required port does not exists
+RS485EMULE_ERROR_ITEMNOTFOUND     The required port does not exist
 RS485EMULE_ERROR_INTERNAL         Database table has been created in a wrong way
 RS485EMULE_ERROR_FORBIDDENOP      The port is in use by another proc
 RS485EMULE_WARNING_TIMEOUT
@@ -65,19 +65,19 @@ RS485EMULE_WARNING_TIMEOUT
 .TP
 .BI "takePort_RS485emulatorAPI(char *" port ")"
 This function allows you to acquire an available virtual slave serial port.
-Retured values:
+Returned values:
 .nf
 RS485EMULE_SUCCESS               The port has been reserved
 RS485EMULE_ERROR_ITEMNOTFOUND    No available ports
-RS485EMULE_ERROR_FORBIDDENOP     You attemt to write into a read-only DB
+RS485EMULE_ERROR_FORBIDDENOP     You attempt to write into a read-only DB
 RS485EMULE_ERROR_UNKNOWN         Unknown error
 RS485EMULE_WARNING_TIMEOUT       Reached timeout. But the function could be re-executed with success
-RS485EMULE_ERROR_UNAVAILRES      The function failed, the resource was unexpectly unavailable
+RS485EMULE_ERROR_UNAVAILRES      The function failed, the resource was unexpectedly unavailable
 .fi
 
 .TP
 .BI "getMPort_RS485emulatorAPI(char *" fpname ")"
-This function is used by the process with master role to get the the serial port name it has to use.
+This function is used by the process with master role to get the serial port name it has to use.
 If the name is an empty string then it means the RS485 emulator has not yet created the virtual port
 Retured values:
 .nf
@@ -94,14 +94,221 @@ In order to reports the SQLite error messages, almost all the functions return a
 .BR WERROR_WITHMESSAGE
 )
 .BI wError
-object as ertor code. In this way the error will reports the SQLite3 text message asfter the main error-code defined by the
+object as error code. In this way the error will reports the SQLite3 text message after the main error-code defined by the
 symbols in the
 .BR RS485_errorCodes.h
-heade file. It can be veryu useful during debug sessions.
+header file. It can be very useful during debug sessions.
+
+.SH Examples
+The following example is the simplest one you can find in the <Project home>/src/test folder, except the unit-tests. It is a fake
+virtual slave device. It performs the following steps:
+.IP "1)" 4
+It initializes the module
+.IP "2)" 4
+It obtain a slave-port
+.IP "3)" 4
+It opens the port
+.IP "4)" 4
+It waits for data sent by the master
+.IP "5)" 4
+It reads the data
+.IP "6)" 4
+It prints the data and writes it in the argument defined file
+.IP "7)" 4
+Goto #4
+
+.PP
+// ---------------------------- C code ----------------------------
+
+.EX
+#define _GNU_SOURCE
+#include <stdio.h>
+#include <unistd.h>
+#include <sys/time.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <errno.h>
+#include <getopt.h>
+#include <stdlib.h>
+#include <stdint.h>
+#include <stdbool.h>
+#include <string.h>
+#include <limits.h>
+#include <poll.h>
+#include <debugTools.h>
+#include <RS485_commonLib.h>
+#include <RS485emulatorAPI.h>
+#include <fakeMaster1.h>
+
+#ifndef DBGTRACE
+#define DBGTRACE ;
+#endif
+
+struct option myopts[] = {
+	 {"repoFile", required_argument, 0, 'r'},
+	 {"verbose",  0,                 0, 'v'},
+	 {0, 0, 0, 0}
+};
+
+bool loop = true;
+
+//------------------------------------------------------------------------------------------------------------------------------
+//                                     P R I V A T E   F U N C T I O N S
+//------------------------------------------------------------------------------------------------------------------------------
+
+void sigHandler (int signum) {
+	if (signum == SIGTERM || signum == SIGINT) loop = false;
+	return;
+}
+
+void summary (char *file) {
+	fprintf(stderr, "Use: %s --repoFile=<file name> [--verbose]\n", file);
+	return;
+}
+
+double getTimeStamp() {
+	//
+	// Description:
+	//	It returns a milliseconds timestamp
+	//
+	struct timeval  tv;
+	gettimeofday(&tv, NULL);
+	return((tv.tv_sec) * 1000 + (tv.tv_usec) / 1000);
+}
+
+//------------------------------------------------------------------------------------------------------------------------------
+//                                                         M A I N 
+//------------------------------------------------------------------------------------------------------------------------------
+int main(int argc, char *argv[]) {
+	int  c = 0;
+	char file[PATH_MAX];
+	int  option_index = 0;
+	bool verbose = false;
+	WERROR_DECLARATION(err, WERROR_JUSTCODE, RS485EMULE_SUCCESS);
+
+	file[0] = '\0';
+
+	if (argc > 1) {
+		c = 0;
+		while (c >= 0) {
+			c = getopt_long(argc, argv, "r:v", myopts, &option_index);
+			if (c > 0) {
+				if (c == 'r')
+					strcpy(file, optarg);
+
+				else if (c == 'v')
+					verbose = true;
+
+				else {
+					summary(argv[0]);
+					exit(RS485EMULE_ERROR_UNKNOWNARG);
+				}
+			}
+		}
+	} else {
+		// ERROR!
+		summary(argv[0]);
+		exit(RS485EMULE_ERROR_ILLEGALSYNTAX);
+	}
+
+	if (file[0] != '\0') {
+		FILE *fh = fopen(file, "w");
+		if (fh != NULL) {
+			int   sfd;
+			char  myport[PATH_MAX];
+
+			signal(SIGTERM, sigHandler);
+			signal(SIGINT,  sigHandler);
+			
+			if ((err = init_RS485emulatorAPI()), WERROR_ISERROR(err)) {
+				// ERROR!
+				fprintf(stderr, "ERROR! I cannot open the virtual ports DB\n");
+				if (verbose && WERROR_GETTYPE(err) == WERROR_WITHMESSAGE)
+					fprintf(stderr, "%s\n", err.withMessage.message);
+				
+			} else if ((err = takePort_RS485emulatorAPI(myport)), WERROR_ISERROR(err)) {
+				// ERROR!
+				fprintf(stderr, "ERROR! I cannot retrive the port I have to use\n");
+				if (verbose && WERROR_GETTYPE(err) == WERROR_WITHMESSAGE)
+					fprintf(stderr, "%s\n", err.withMessage.message);
+
+			} else if ((sfd = open(myport, O_RDWR|O_NOCTTY)) && sfd < 0) {
+				// ERROR!
+				fprintf(stderr, "ERROR! I cannot open the \"%s\" serial port\n", myport);
+				WERROR_GETCODE(err) = RS485EMULE_ERROR_IOFAILED;
+				if (verbose)
+					fprintf(stderr, "%s\n", strerror(errno));
+	
+			} else {
+				char            data[1024];
+				struct pollfd   fds[2];
+				int             ret;
+				struct timespec pollTimeout;
+
+				//
+				// Polling mechanism settings...
+				//
+				fds[0].fd           = sfd;
+				fds[0].events       = POLLIN;
+				pollTimeout.tv_sec  = 0;
+				pollTimeout.tv_nsec = 100 * 1000 * 1000;
+				
+				printf("%s is ready to log data from %s (fd=%d)\n", argv[0], myport, sfd);
+				fprintf(fh, "%s (pid=%d)\n", argv[0], getpid());
+			
+				while (loop && WERROR_ISERROR(err) == false) {
+					ret = ppoll(fds, 2, &pollTimeout, NULL);
+
+					if (ret < 0 && errno != EINTR) {
+						// ERROR!
+						fprintf(stderr, "ppoll() failed: %s\n", strerror(errno));
+						WERROR_GETCODE(err) = RS485EMULE_ERROR_IOFAILED;
+					
+					} else if (ret == 0) {
+						// TIMEOUT
+						//printf("Timeout\n");
+				
+					} else if (fds[0].revents & POLLIN) {
+
+						if (RS485emu_dataReceive(sfd, (void*)data, sizeof(char)*FMASTER_DATASIZE) == FMASTER_DATASIZE) {
+							fprintf(fh, "%f: %s\n", getTimeStamp(), data); fflush(fh);
+							printf("\r%s", data); fflush(stdout);
+						} else {
+							// ERROR!
+							fprintf(
+								stderr, "ERROR! I cannot read data from \"%s\" serial port: %s\n",
+								myport, strerror(errno)
+							);
+							WERROR_GETCODE(err) = RS485EMULE_ERROR_IOFAILED;
+						}
+					}
+				}
+
+				printf("Shouting down peocedure....\n");
+				
+				if ((err = release_RS485emulatorAPI(myport)), WERROR_ISERROR(err)) 
+					// ERROR!
+					fprintf(stderr, "ERROR! I cannot release the port I used\n");
+					
+				close_RS485emulatorAPI();
+			}
+			fclose(fh);
+		}
+	} else {
+		// ERROR!
+		fprintf(stderr, "ERROR! You have to specify the activity report filename\n");
+		summary(argv[0]);
+		exit(RS485EMULE_ERROR_ILLEGALSYNTAX);
+	}
+
+	exit(wError_shellCode(err));
+}	
+.EE
 
 .SH SEE ALSO
 .BR wRS485_emulator (1), wError (3) 
 
 .SH AUTHOR
-Silvano Catinella
+Silvano Catinella <catinella@yahoo.com>
 
