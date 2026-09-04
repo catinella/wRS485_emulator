@@ -112,7 +112,7 @@ void sigHandler (int signum) {
 			interruptedBus = false;
 			wrpLogMsg("RS485-BUS fixed", RS485EMULE_SUCCESS);
 		}
-	
+	}
 	return;
 }
 
