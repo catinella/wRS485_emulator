@@ -259,7 +259,7 @@ wError_t getMPort_RS485emulatorAPI (char *fpname) {
 wError_t release_RS485emulatorAPI (const char *serialport) {
 	//
 	// Description:
-	//	It allows the client process to get an available virtual serial port
+	//	It marks the port as available. It allows another process to use it
 	//
 	// Returne value:
 	//	RS485EMULE_SUCCESS                OK, the porst is available now
