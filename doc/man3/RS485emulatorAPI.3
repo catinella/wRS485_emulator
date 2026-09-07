@@ -1,7 +1,8 @@
 .TH RS485EMULATORAPI 3 "September 2026" "wRS485_emulator" "Library Functions"
 
 .SH NAME
-RS485emulatorAPI - API for accessing the wRS485_emulator virtual RS485 ports
+RS485emulatorAPI, RS485emulatorAPI.h, init_RS485emulatorAPI, close_RS485emulatorAPI, release_RS485emulatorAPI, \
+takePort_RS485emulatorAPI, getMPort_RS485emulatorAPI - API for accessing the wRS485_emulator virtual RS485 ports
 
 .SH SYNOPSIS
 .nf
@@ -21,19 +22,16 @@ RS485emulatorAPI - API for accessing the wRS485_emulator virtual RS485 ports
 .SH DESCRIPTION
 The 
 .B RS485emulatorAPI
-interface provides functions used by (sever and master) applications to access and manage virtual serial ports exported by
-.BR wRS485_emulator.
-When the process starts, it provides a virtual master-port and a set of virtual slave-port. All necessary data to get one of
-them, is managed by a SQLite3 file-database, where the file location is defined by the 
+interface provides functions used by (slave and master) applications to access and manage virtual serial ports exported by
+\fBwRS485_emulator\fP.  When the process starts, it provides a virtual master-port and a set of virtual slave-port. All
+necessary data to get one of them, is managed by a SQLite3 file-database, where the file location is defined by the 
 .BR RS485_PORTSDBFILE.
 
-First of all, your process needs to open a channel to the DB. You can achieve the result calling the
-.BR init_RS485emulatorAPI ()
+First of all, your process needs to open a channel to the DB. You can achieve the result calling the \fBinit_RS485emulatorAPI\fP()
 function. It must be executed before using any other API functions.
 
-When the obtained virtual serial port is no longer required,
-.BR close_RS485emulatorAPI ()
-should be called to close the channel to database.
+When the obtained virtual serial port is no longer required, \fBclose_RS485emulatorAPI\fP() should be called to close the
+channel to database.
 
 .SH FUNCTIONS
 
@@ -90,14 +88,9 @@ RS485EMULE_ERROR_EXTTOOLFAILURE   rs485_updateTool returned an error
 .fi
 
 .SH RETURN VALUE
-In order to reports the SQLite error messages, almost all the functions return a (type =
-.BR WERROR_WITHMESSAGE
-)
-.BI wError
-object as error code. In this way the error will reports the SQLite3 text message after the main error-code defined by the
-symbols in the
-.BR RS485_errorCodes.h
-header file. It can be very useful during debug sessions.
+Most functions return a wError object with type WERROR_WITHMESSAGE. This allows SQLite3 diagnostic messages to be included
+together with the main error code defined in RS485_errorCodes.h. The additional diagnostic information can be particularly
+useful during debugging.
 
 .SH Examples
 The following example is the simplest one you can find in the <Project home>/src/test folder, except the unit-tests. It is a fake
@@ -136,14 +129,7 @@ Goto #4
 #include <string.h>
 #include <limits.h>
 #include <poll.h>
-#include <debugTools.h>
-#include <RS485_commonLib.h>
 #include <RS485emulatorAPI.h>
-#include <fakeMaster1.h>
-
-#ifndef DBGTRACE
-#define DBGTRACE ;
-#endif
 
 struct option myopts[] = {
 	 {"repoFile", required_argument, 0, 'r'},
@@ -152,10 +138,6 @@ struct option myopts[] = {
 };
 
 bool loop = true;
-
-//------------------------------------------------------------------------------------------------------------------------------
-//                                     P R I V A T E   F U N C T I O N S
-//------------------------------------------------------------------------------------------------------------------------------
 
 void sigHandler (int signum) {
 	if (signum == SIGTERM || signum == SIGINT) loop = false;
@@ -307,8 +289,10 @@ int main(int argc, char *argv[]) {
 .EE
 
 .SH SEE ALSO
-.BR wRS485_emulator (1), wError (3) 
+\fBwRS485_emulator\fP(1), \fBwError\fP(3) 
 
 .SH AUTHOR
-Silvano Catinella <catinella@yahoo.com>
-
+Silvano Catinella
+.MT catinella@yahoo.com
+catinella@yahoo.com
+.ME
