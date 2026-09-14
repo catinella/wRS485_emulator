@@ -17,7 +17,7 @@ print it, and write it to the file specified as file's argument.
 
 ![](./images/overview.svg)
 
-## 2.1 Test preparatrion
+## 2.1 Test preparation
 1) you need to build the binary files. To achieve the result, please, follow the section #3.
 2) Start as many slaves as you want with the following command:
 
