@@ -4,14 +4,17 @@
 
 ## 1.0 Files
 
-|   Files/Dirs  |                     Description                           |
-|---------------|-----------------------------------------------------------|
-| images        | This folder contains picture used by the README.md files  |
-| LICENSE       | GPL 3 license                                             |
-| Changes.md    | Main changes of every released version                    |
-| TODO.md       | Features to implement in the next versions                |
-| src           | C source code                                             |
-| tools         | External sub-modules (eg. winstall)                       |
+|     Files/Dirs   |                     Description                           |
+|------------------|-----------------------------------------------------------|
+| images           | This folder contains picture used by the README.md files  |
+| LICENSE-LGPL3.md | LGPL 3 license document                                   |
+| Changes.md       | Main changes of every released version                    |
+| TODO.md          | Features to implement in the next versions                |
+| src              | C source code                                             |
+| tools            | External sub-modules (eg. winstall)                       |
+| doc              | Documentation (man-pages...)                              |
+| misc             | Other project's files                                     |
+| winstall.conf    | Winstall tool main configuration file                     |
 
 ## 2.0 Description
 
@@ -56,10 +59,17 @@ When you have downloaded the sub-module, you can install wRS485_emulator with th
 
 For further information on this tool, please, read the [winstall project's page](https://github.com/catinella/winstall)
 
-## 3.0 TODO
+## 4.0 Documentation
+This project provides two **man-pages**: one for the emulator executable and one for the API used to connect virtual devices
+to the emulated bus.
+
+If you are looking for complete examples, you can find some in the **src/test** folder. The same directory also contains
+the unit tests used to verify the software.
+
+## 4.1 TODO
 [TODO](TODO.md)
 
-## 4.0 Changes
+## 4.2 Changes
 [CHANGES](Changes.md)
 
 ## 5.0 Licence:
