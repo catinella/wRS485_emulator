@@ -106,11 +106,6 @@ fakeSerialDev%.o:		fakeSerialDev%.c
 				@$(CC) $(GCCOPTS) -c $< $(INCLUDE) -I. -I../ "-DTESTMODE=$(TESTMODE)" -o $@
 
 
-#libForTests.o:		../libForTests.c
-#				@echo "[ CC C2] $@"
-#				@$(CC) $(GCCOPTS) -c $< $(INCLUDE) -I. -I.. "-DTESTMODE=$(TESTMODE)" -o $@
-
-
 fakeMaster%.o:		fakeMaster%.c
 				@echo "[ CC 1] $@"
 				@$(CC) $(GCCOPTS) -c $< $(INCLUDE) -I. -I../ "-DTESTMODE=$(TESTMODE)" -o $@
