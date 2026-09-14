@@ -42,7 +42,6 @@
 #include <debugTools.h>
 #include <RS485_commonLib.h>
 #include <RS485emulatorAPI.h>
-#include <fakeMaster1.h>
 
 #ifndef DBGTRACE
 #define DBGTRACE ;
