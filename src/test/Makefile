@@ -30,10 +30,6 @@ CC       = gcc
 
 testSrcsList     := $(shell ls utest_*.c)
 testsList        := $(testSrcsList:%.c=%)
-fDevSrcsList     := $(shell ls fakeSerialDev*.c)
-fakeDevsList     := $(fDevSrcsList:%.c=%)
-fMastersSrcsList := $(shell ls fakeMaster*.c)
-fakeMastersList  := $(fMastersSrcsList:%.c=%)
 RS485EMULE_GROUP := $(shell sed -n 's/^tty:[^:]*:\([0-9]\+\):.*/\1/p' /etc/group)
 PRJHOME          := $(shell pwd)
 
@@ -89,7 +85,7 @@ INCLUDE :=                                    \
 #                                                 M A I N  R U L E S
 #-------------------------------------------------------------------------------------------------------------------------------
 
-all:				PRJ $(testsList) $(fakeDevsList) $(fakeMastersList)
+all:				PRJ $(testsList)
 
 clean:
 				@echo "[CLEAN]"
@@ -98,7 +94,7 @@ clean:
 
 cleanall:			clean
 				@echo "[CLEANALL]"
-				@rm -fv $(testsList) $(fakeDevsList) $(fakeMastersList)
+				@rm -fv $(testsList)
 				@make -C../ cleanall
 
 PRJ:
@@ -123,19 +119,9 @@ utest_%__main.sgc:	utest_%.c
 				@$(MINUTE_SCG) --srcFilename $< --tgtFilename $@ --verbose
 
 
-fakeSerialDev%.o:		fakeSerialDev%.c
-				@echo "[ CC 3] $@"
-				@$(CC) $(GCCOPTS) -c $< $(INCLUDE) -I. -I../ "-DTESTMODE=$(TESTMODE)" -o $@
-
-
 libForTests.o:		libForTests.c
 				@echo "[ CC C1] $@"
 				@$(CC) $(GCCOPTS) -c $< $(INCLUDE) -I. -I.. "-DTESTMODE=$(TESTMODE)" -o $@
-
-
-fakeMaster%.o:		fakeMaster%.c
-				@echo "[ CC 4] $@"
-				@$(CC) $(GCCOPTS) -c $< $(INCLUDE) -I. -I../ "-DTESTMODE=$(TESTMODE)" -o $@
 
 
 %.o:				../%.c ../%.h
@@ -150,21 +136,6 @@ fakeMaster%.o:		fakeMaster%.c
 utest_RS485_virtualPort:	utest_RS485_virtualPort.o RS485_virtualPort.o RS485_commonLib.o RS485_portsDB.o libForTests.o
 					@echo "[LD C3] $@"
 					@$(CC) -Wall -o $@ $^ -lm -lMinuteC -lsqlite3 $(shell pkg-config --static --libs glib-2.0) -lwError
-
-ifeq ($(NOMODBUS), 1)
-fakeSerialDev3:		
-				@echo "[SKIPPED] $@"
-endif
-
-
-fakeMaster%:		fakeMaster%.o libForTests.o
-				@echo "[LD 1] $@"
-				@$(CC) -Wall -o $@ $^ -lm $(PRJLIB_L) $(LIBS)
-
-
-fakeSerialDev%:		fakeSerialDev%.o libForTests.o 
-				@echo "[LD 2] $@"
-				@$(CC) -Wall -o $@ $^ -lm $(mbLinkOpt) $(PRJLIB_L) $(LIBS) 
 
 
 utest_%:			utest_%.o libForTests.o %.o RS485_commonLib.o
