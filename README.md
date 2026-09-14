@@ -66,10 +66,10 @@ to the emulated bus.
 If you are looking for complete examples, you can find some in the **src/test** folder. The same directory also contains
 the unit tests used to verify the software.
 
-## 4.1 TODO
+### 4.1 TODO
 [TODO](TODO.md)
 
-## 4.2 Changes
+### 4.2 Changes
 [CHANGES](Changes.md)
 
 ## 5.0 Licence:
