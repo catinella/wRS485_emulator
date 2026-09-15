@@ -19,11 +19,16 @@ print it, and write it to the file specified as file's argument.
 
 ## 2.1 Test preparation
 1) you need to build the binary files. To achieve the result, please, follow the section #3.
-2) Start as many slaves as you want with the following command:
+
+2) start the RS485 bus emulator
+
+	../../RS485_emulator --foreground
+
+3) Start as many slaves as you want with the following command:
 
 	./fakeSerialDev1 --repoFile=<file name> [--verbose]
 
-3) Start the master typing the following command: 
+4) Start the master typing the following command: 
 
 	./fakeMaster1 [--time=<seconds>] [--loopSleep=<milliseconds>]
 
