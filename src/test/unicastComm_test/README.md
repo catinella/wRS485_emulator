@@ -19,17 +19,19 @@ other slaves, whose IDs were not specified in the master's arguments, will recei
 1) you need to build the binary files. To achieve the result, please, follow the section #3.
 
 2) start the RS485 bus emulator
-
+```console
 	../../RS485_emulator --foreground
+```
 
 3) Start as many slaves as you want with the following command:
-
+```console
 	./fakeSerialDev2 --id=<n>
+```
 
 4) Start the master typing the following command: 
-
+```console
 	./fakeMaster2 --ids=<n1>[,<n2>]...
-
+```
 
 ## 3.0 Binary file building
 To build the files required by the test, type the following command:
