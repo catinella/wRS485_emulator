@@ -71,12 +71,14 @@ MINUTE_SCG  = /usr/local/share/minute/minute_cCodeGenerator.py
 LIBS =                                    \
 	$(shell pkg-config --libs sqlite3)  \
 	$(shell pkg-config --libs glib-2.0) \
+	$(shell pkg-config --libs minuteC)  \
 	$(shell pkg-config --libs wError)
 
-INCLUDE :=                                    \
-	-I/usr/include -I/usr/local/include -I. \
-	$(shell pkg-config --cflags sqlite3)    \
-	$(shell pkg-config --cflags glib-2.0)   \
+INCLUDE :=                                  \
+	-I/usr/include -I.                    \
+	$(shell pkg-config --cflags sqlite3)  \
+	$(shell pkg-config --cflags glib-2.0) \
+	$(shell pkg-config --cflags minuteC)  \
 	$(shell pkg-config --cflags wError) 
 
 .PHONY: emulator clean test cleanall install uninstall PRJ
@@ -135,14 +137,14 @@ libForTests.o:		libForTests.c
 
 utest_RS485_virtualPort:	utest_RS485_virtualPort.o RS485_virtualPort.o RS485_commonLib.o RS485_portsDB.o libForTests.o
 					@echo "[LD C3] $@"
-					@$(CC) -Wall -o $@ $^ -lm -lMinuteC -lsqlite3 $(shell pkg-config --static --libs glib-2.0) -lwError
+					@$(CC) -Wall -o $@ $^ -lm $(LIBS)
 
 
 utest_%:			utest_%.o libForTests.o %.o RS485_commonLib.o
 				@echo "[LD 4] $@"
-				@$(CC) -Wall -o $@ $^ -lm -lMinuteC $(LIBS)
+				@$(CC) -Wall -o $@ $^ -lm $(LIBS)
 
 
 utest_%:			utest_%.o libForTests.o RS485_commonLib.o
 				@echo "[LD 5] $@"
-				@$(CC) -Wall -o $@ $^ -lm -lMinuteC $(LIBS)
+				@$(CC) -Wall -o $@ $^ -lm $(LIBS)
